@@ -158,14 +158,21 @@ const CSS = `
   padding: 4px;
 }
 .gitui-dir-option {
+  display: flex; align-items: center; gap: 6px;
   padding: 6px 10px;
   font-size: calc(12px * var(--git-ui-font-scale, 1));
   cursor: pointer;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   border-radius: 6px;
 }
+.gitui-dir-option-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gitui-dir-option-del {
+  flex: none; background: transparent; border: none; color: var(--git-ui-text-dim);
+  cursor: pointer; padding: 0 2px; font-size: calc(12px * var(--git-ui-font-scale, 1));
+  line-height: 1; border-radius: 4px; visibility: hidden;
+}
+.gitui-dir-option:hover .gitui-dir-option-del,
+.gitui-dir-option-selected .gitui-dir-option-del { visibility: visible; }
+.gitui-dir-option-del:hover { color: var(--git-ui-text); background: rgba(128,128,128,.15); }
 .gitui-dir-option:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,.14)); }
 .gitui-dir-option-selected { background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,.2)); color: var(--git-ui-accent); }
 .gitui-btn {

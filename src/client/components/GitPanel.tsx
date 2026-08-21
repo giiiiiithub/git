@@ -25,8 +25,10 @@ import {
   GIT_UI_MIN_WIDTH,
   SPLIT_DEFAULTS,
   SPLIT_MIN,
+  gitUiAddRecentDir,
   gitUiAdjustFontScale,
   gitUiFollowCwd,
+  gitUiRemoveRecentDir,
   gitUiSetDir,
   gitUiSetFloating,
   gitUiSetFloatMaximized,
@@ -464,7 +466,7 @@ export function GitPanel(props: {
 }): JSX.Element {
   const { t, api, useSessions, useWorkspaces } = props;
   const snapshot = useGitUi();
-  const { open, dir, followSession, floating, fullscreen, panelHeight, floatPos, floatMaximized, floatWidth, status, statusLoading, statusError, statusErrorCode, fontScale } = snapshot;
+  const { open, dir, followSession, floating, fullscreen, panelHeight, floatPos, floatMaximized, floatWidth, status, statusLoading, statusError, statusErrorCode, fontScale, recentDirs } = snapshot;
 
   const [dirDraft, setDirDraft] = useState(dir);
   const [tab, setTab] = useState<"changes" | "files" | "merge" | "history" | "branches" | "stash" | "remotes" | "config">("changes");
@@ -954,9 +956,12 @@ export function GitPanel(props: {
     useWorkspaces !== undefined ? useWorkspaces((state) => state.items.map((item) => item.path)) : [];
   const dirOptions = Array.from(
     new Set(
-      [...(dir !== "" ? [dir] : []), ...(sessionCwd !== "" ? [sessionCwd] : []), ...workspaceDirs].filter(
-        (path) => path !== ""
-      )
+      [
+        ...workspaceDirs,
+        ...(sessionCwd !== "" ? [sessionCwd] : []),
+        ...(dir !== "" ? [dir] : []),
+        ...recentDirs
+      ].filter((path) => path !== "")
     )
   );
   const [dirMenuOpen, setDirMenuOpen] = useState(false);
@@ -1766,7 +1771,11 @@ export function GitPanel(props: {
           }}
           onKeyDown={(event) => {
             if (event.key === "Enter") {
-              gitUiSetDir(dirDraft);
+              const target = dirDraft.trim();
+              gitUiSetDir(target);
+              if (target !== "" && !workspaceDirs.includes(target) && target !== sessionCwd) {
+                gitUiAddRecentDir(target);
+              }
               setDirMenuOpen(false);
             } else if (event.key === "Escape") {
               setDirMenuOpen(false);
@@ -1791,7 +1800,21 @@ export function GitPanel(props: {
                   setDirMenuOpen(false);
                 }}
               >
-                {path}
+                <span className="gitui-dir-option-label">{path}</span>
+                {recentDirs.includes(path) && !workspaceDirs.includes(path) && (
+                  <button
+                    type="button"
+                    className="gitui-dir-option-del"
+                    title={t("menu.removeRecentDir")}
+                    onMouseDown={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      gitUiRemoveRecentDir(path);
+                    }}
+                  >
+                    ✕
+                  </button>
+                )}
               </div>
             ))}
           </div>

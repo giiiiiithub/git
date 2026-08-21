@@ -41,6 +41,8 @@ export interface GitUiSnapshot {
   revision: number;
   /** Global panel font-scale multiplier (1 = default). Scales the whole panel UI. */
   fontScale: number;
+  /** Dirs the user entered manually (not session workspaces), for the dropdown. */
+  recentDirs: string[];
 }
 
 const DIR_KEY = "dsh-git-ui.dir";
@@ -55,6 +57,8 @@ const WIDTH_KEY = "dsh-git-ui.width";
 const FLOAT_KEY = "dsh-git-ui.float";
 const POS_KEY = "dsh-git-ui.pos";
 const SPLIT_KEY = "dsh-git-ui.splits";
+const RECENT_DIRS_KEY = "dsh-git-ui.recentDirs";
+const RECENT_DIRS_MAX = 20;
 
 const DEFAULT_HEIGHT = 320;
 const MIN_HEIGHT = 240;
@@ -172,6 +176,31 @@ function readSplits(): Record<GitUiSplitTab, number> {
   return out;
 }
 
+function initialRecentDirs(): string[] {
+  try {
+    const saved = localStorage.getItem(RECENT_DIRS_KEY);
+    if (saved !== null) {
+      const parsed = JSON.parse(saved) as unknown;
+      if (Array.isArray(parsed)) {
+        const seen = new Set<string>();
+        const out: string[] = [];
+        for (const item of parsed) {
+          if (typeof item !== "string") continue;
+          const path = item.trim();
+          if (path === "" || seen.has(path)) continue;
+          seen.add(path);
+          out.push(path);
+          if (out.length >= RECENT_DIRS_MAX) break;
+        }
+        return out;
+      }
+    }
+  } catch {
+    /* storage unavailable */
+  }
+  return [];
+}
+
 let snapshot: GitUiSnapshot = {
   open: false,
   dir: initialDir(),
@@ -188,7 +217,8 @@ let snapshot: GitUiSnapshot = {
   floatMaximized: false,
   floatWidth: Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, readNumber(WIDTH_KEY, DEFAULT_WIDTH))),
   revision: 0,
-  fontScale: readFontScale()
+  fontScale: readFontScale(),
+  recentDirs: initialRecentDirs()
 };
 
 const listeners = new Set<() => void>();
@@ -345,6 +375,30 @@ export function gitUiSetFontScale(scale: number): void {
 /** Adjust the global panel font-scale by a step, clamped to the range. */
 export function gitUiAdjustFontScale(delta: number): void {
   gitUiSetFontScale(snapshot.fontScale + delta);
+}
+
+/** Persist a dir the user entered manually; used for the dropdown + new tabs. */
+export function gitUiAddRecentDir(dir: string): void {
+  const normalized = dir.trim();
+  if (normalized === "" || snapshot.recentDirs.includes(normalized)) return;
+  const recentDirs = [normalized, ...snapshot.recentDirs].slice(0, RECENT_DIRS_MAX);
+  set({ recentDirs });
+  try {
+    localStorage.setItem(RECENT_DIRS_KEY, JSON.stringify(recentDirs));
+  } catch {
+    /* storage unavailable */
+  }
+}
+
+/** Remove a manual dir record from the dropdown list (never the workspace). */
+export function gitUiRemoveRecentDir(dir: string): void {
+  const recentDirs = snapshot.recentDirs.filter((item) => item !== dir);
+  set({ recentDirs });
+  try {
+    localStorage.setItem(RECENT_DIRS_KEY, JSON.stringify(recentDirs));
+  } catch {
+    /* storage unavailable */
+  }
 }
 
 export {
