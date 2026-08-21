@@ -400,6 +400,25 @@ export const reposResultSchema = resultSchema(
   })
 );
 
+/**
+ * Find git repositories inside the subdirectories of `dir` (never `dir`
+ * itself). Used by the directory dropdown: when the session cwd is not itself
+ * a repository root, its nested repos (up to maxDepth levels) are offered as
+ * candidates instead.
+ */
+export const findReposRequestSchema = z.object({
+  dir: z.string().min(1),
+  /** Maximum subdirectory depth to scan (1..10, default 3). */
+  maxDepth: z.number().int().min(1).max(10).optional()
+});
+
+export const findReposResultSchema = resultSchema(
+  z.object({
+    /** Absolute paths of the repository roots found under `dir`. */
+    repos: z.array(z.string())
+  })
+);
+
 // ── git init ─────────────────────────────────────────────────────────────────
 
 export const initRequestSchema = dirRequestSchema;

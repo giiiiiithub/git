@@ -5,7 +5,7 @@
  * dispatches `git/<method>` onto the live service by method name.
  */
 import { randomUUID } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, statSync, writeFileSync, type Dirent } from "node:fs";
 import { dirname, isAbsolute, join, resolve, sep } from "node:path";
 import type { Context } from "@deepseek-ai/cordis";
 import { TypertRemoteService } from "@deepseek-ai/dsh-typert-protocol";
@@ -276,6 +276,50 @@ export default class GitService extends TypertRemoteService {
       repos.push({ input, root });
     }
     return { ok: true, value: { repos } };
+  }
+
+  /**
+   * Scan the subdirectories of `dir` (at most `maxDepth` levels, default 3)
+   * for git repositories and return their roots. `dir` itself is never
+   * reported — the caller probes whether it is a repo root via `repos`. A
+   * found repo is not descended into (submodules / nested repos stay hidden),
+   * and noisy entries (node_modules, dot-dirs, symlinks) are skipped so the
+   * scan stays fast even when `dir` is a large directory.
+   */
+  async findRepos(request: { dir: string; maxDepth?: number }): Promise<GitResult<{ repos: string[] }>> {
+    const root = resolve(request.dir);
+    if (!existsSync(root)) return { ok: true, value: { repos: [] } };
+    const maxDepth = Math.min(10, Math.max(1, Math.floor(request.maxDepth ?? 3)));
+    const found: string[] = [];
+    // Bounded scan: stop after this many visited directories so a huge tree
+    // (e.g. a home directory) cannot hang the call.
+    const MAX_SCANNED = 2000;
+    let scanned = 0;
+    const queue: Array<{ dir: string; depth: number }> = [{ dir: root, depth: 0 }];
+    while (queue.length > 0 && scanned < MAX_SCANNED) {
+      const current = queue.shift() as { dir: string; depth: number };
+      if (current.depth >= maxDepth) continue;
+      let dirents: Dirent[] = [];
+      try {
+        dirents = readdirSync(current.dir, { withFileTypes: true });
+      } catch {
+        continue; // unreadable directory — skip
+      }
+      scanned += 1;
+      for (const entry of dirents) {
+        if (!entry.isDirectory() || entry.isSymbolicLink()) continue;
+        const name = entry.name;
+        if (name === "node_modules" || name.startsWith(".")) continue;
+        const candidate = join(current.dir, name);
+        if (existsSync(join(candidate, ".git"))) {
+          found.push(candidate);
+        } else {
+          queue.push({ dir: candidate, depth: current.depth + 1 });
+        }
+      }
+    }
+    found.sort();
+    return { ok: true, value: { repos: found } };
   }
 
   // ── git init ───────────────────────────────────────────────────────────────

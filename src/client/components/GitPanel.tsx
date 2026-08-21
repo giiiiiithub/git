@@ -954,6 +954,38 @@ export function GitPanel(props: {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionCwd]);
 
+  // Session-dir repo discovery: when the session cwd is NOT itself a git
+  // repository root, scan its subdirectories (max 3 levels) and offer every
+  // found repo root as a dropdown candidate. When it IS the root the plain
+  // session-cwd entry is enough and no scan runs.
+  const [sessionRepoOptions, setSessionRepoOptions] = useState<string[]>([]);
+  useEffect(() => {
+    if (sessionCwd === "") {
+      setSessionRepoOptions([]);
+      return;
+    }
+    let alive = true;
+    void (async () => {
+      try {
+        const probes = await api.repos([sessionCwd]);
+        const root = probes[0]?.root ?? null;
+        if (!alive) return;
+        if (root === sessionCwd) {
+          setSessionRepoOptions([]);
+          return;
+        }
+        const repos = await api.findRepos(sessionCwd, 3);
+        if (!alive) return;
+        setSessionRepoOptions(repos);
+      } catch {
+        if (alive) setSessionRepoOptions([]);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [api, sessionCwd]);
+
   // Dropdown options: current dir + current session cwd + every workspace dir.
   const workspaceDirs =
     useWorkspaces !== undefined ? useWorkspaces((state) => state.items.map((item) => item.path)) : [];
@@ -962,6 +994,7 @@ export function GitPanel(props: {
       [
         ...workspaceDirs,
         ...(sessionCwd !== "" ? [sessionCwd] : []),
+        ...sessionRepoOptions,
         ...(dir !== "" ? [dir] : []),
         ...recentDirs
       ].filter((path) => path !== "")

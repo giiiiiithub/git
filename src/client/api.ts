@@ -121,6 +121,7 @@ type Namespace = {
     content: string;
   }): Promise<GitResult<{ path: string }>>;
   repos(request: { dirs: string[] }): Promise<GitResult<{ repos: RepoProbe[] }>>;
+  findRepos(request: { dir: string; maxDepth?: number }): Promise<GitResult<{ repos: string[] }>>;
   init(request: { dir: string }): Promise<GitResult<{ root: string }>>;
   clone(request: { url: string; target: string }): Promise<GitResult<{ root: string }>>;
   suggestGitignore(request: { dir: string }): Promise<GitResult<{ path: string; changed: boolean }>>;
@@ -361,6 +362,15 @@ export class GitApi {
 
   async repos(dirs: string[]): Promise<RepoProbe[]> {
     const value = await this.call<{ repos: RepoProbe[] }>("repos", { dirs });
+    return value.repos;
+  }
+
+  /** Find git repositories inside the subdirectories of `dir` (max 3 levels). */
+  async findRepos(dir: string, maxDepth?: number): Promise<string[]> {
+    const value = await this.call<{ repos: string[] }>("findRepos", {
+      dir,
+      ...(maxDepth !== undefined ? { maxDepth } : {})
+    });
     return value.repos;
   }
 
