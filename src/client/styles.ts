@@ -898,6 +898,33 @@ const CSS = `
 }
 /* The detail panel's meta margin must not stretch log rows. */
 .gitui-log-row .gitui-commit-meta { margin-top: 0; }
+
+/* Hover popup showing a commit's full metadata + file stats. */
+.gitui-hover-card {
+  position: fixed; z-index: 2147483600; max-width: 380px; max-height: 72vh; overflow: auto;
+  background: var(--dsw-alias-bg-layer-1, #1e1e1e);
+  border: 1px solid var(--git-ui-border); border-radius: 8px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, .35);
+  padding: 8px 10px; color: var(--git-ui-text);
+  font-size: calc(12px * var(--git-ui-font-scale, 1));
+  pointer-events: none; /* read-only; copy via the row's right-click menu */
+}
+.gitui-hover-card-body { display: flex; flex-direction: column; gap: 4px; min-width: 260px; }
+.gitui-hover-hash { font-family: ui-monospace, Consolas, monospace; font-size: calc(11px * var(--git-ui-font-scale, 1)); color: var(--git-ui-accent); font-weight: 600; overflow-wrap: anywhere; }
+.gitui-hover-row { display: flex; gap: 6px; align-items: baseline; }
+.gitui-hover-row .gitui-hover-k { flex: none; width: 58px; color: var(--git-ui-text-dim); }
+.gitui-hover-row .gitui-hover-v { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.gitui-hover-msg { border-top: 1px solid var(--git-ui-border); padding-top: 4px; margin-top: 2px; white-space: pre-wrap; }
+.gitui-hover-files {
+  border-top: 1px solid var(--git-ui-border); padding-top: 4px; margin-top: 2px;
+  max-height: 140px; overflow: auto; display: flex; flex-direction: column; gap: 1px;
+}
+.gitui-hover-files-label { color: var(--git-ui-text-dim); }
+.gitui-hover-file { display: flex; gap: 6px; align-items: baseline; font-family: ui-monospace, Consolas, monospace; font-size: calc(11px * var(--git-ui-font-scale, 1)); }
+.gitui-hover-file .gitui-hover-st { flex: none; width: 16px; color: var(--git-ui-accent); }
+.gitui-hover-file .gitui-hover-path { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gitui-hover-file .gitui-hover-num { flex: none; color: var(--git-ui-text-dim); }
+.gitui-hover-more { color: var(--git-ui-text-dim); }
 .gitui-log-row:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,.12)); }
 .gitui-log-row-selected { background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,.2)); border-left-color: var(--git-ui-accent); }
 .gitui-log-row .gitui-commit-subject { font-size: calc(12px * var(--git-ui-font-scale, 1)); }

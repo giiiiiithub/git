@@ -20,6 +20,40 @@ function formatDate(timestamp: number): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
+function formatShortDate(timestamp: number): string {
+  const date = new Date(timestamp);
+  const pad = (value: number): string => String(value).padStart(2, "0");
+  const yy = String(date.getFullYear()).slice(2);
+  return yy + "-" + pad(date.getMonth() + 1) + "-" + pad(date.getDate()) + " " + pad(date.getHours()) + ":" + pad(date.getMinutes());
+}
+
+/** Readable key:value text block of a commit, for "copy metadata". */
+function buildMetadataText(t: GitUiT, d: CommitDetail): string {
+  const lines: string[] = [
+    d.short + " · " + d.hash,
+    t("log.author") + ": " + d.author + (d.authorEmail !== "" ? " <" + d.authorEmail + ">" : ""),
+    t("log.authorDate") + ": " + formatDate(d.authorDate),
+    t("log.committer") + ": " + d.committer,
+    t("log.commitDate") + ": " + formatDate(d.committerDate)
+  ];
+  if (d.parents.length > 0) lines.push(t("log.parents") + ": " + d.parents.join(", "));
+  lines.push("", d.subject);
+  if (d.body !== "") lines.push(d.body);
+  if (d.files.length > 0) {
+    lines.push(t("log.files") + " (" + d.files.length + ")");
+    for (const file of d.files) {
+      const head = "  " + (STATUS_LABEL[file.status] ?? file.status) + "  " + file.path;
+      lines.push(file.additions !== null ? head + "  +" + file.additions + "/-" + (file.deletions ?? 0) : head);
+    }
+  }
+  return lines.join("\n");
+}
+
+/** The full commit message (subject + body), for "copy commit message". */
+function commitMessageText(d: CommitDetail): string {
+  return d.body !== "" ? d.subject + "\n\n" + d.body : d.subject;
+}
+
 const STATUS_LABEL: Record<string, string> = {
   A: "A",
   M: "M",
@@ -51,13 +85,10 @@ function CommitDetailPanel(props: {
   const [filePath, setFilePath] = useState<string | null>(null);
   const [diffFiles, setDiffFiles] = useState<DiffFile[] | null>(null);
   const [diffLoading, setDiffLoading] = useState(false);
-  const [copied, setCopied] = useState(false);
   /** Compare mode: show the diff between this commit and the working tree. */
   const [worktreeMode, setWorktreeMode] = useState(false);
   /** Files of the worktree diff (all paths when worktreeMode). */
   const [worktreeFiles, setWorktreeFiles] = useState<Array<{ path: string }>>([]);
-  /** Expand the commit body + full metadata (compact by default: bigger diff). */
-  const [showInfo, setShowInfo] = useState(false);
 
   const [fileLimit, setFileLimit] = useState(200);
   const FILE_PAGE = 200;
@@ -168,16 +199,6 @@ function CommitDetailPanel(props: {
     return;
   });
 
-  async function copyHash(): Promise<void> {
-    try {
-      await navigator.clipboard.writeText(detail?.hash ?? "");
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1200);
-    } catch {
-      /* clipboard unavailable */
-    }
-  }
-
   /** Detail container, measured for the changed-pane width drag. */
   const detailRef = useRef<HTMLDivElement>(null);
   /** Drag the divider between the changed-files pane and the diff. */
@@ -245,48 +266,6 @@ function CommitDetailPanel(props: {
   return (
     <div className="gitui-commit-detail" ref={detailRef}>
       {!diffFullscreen && (
-      <div className="gitui-detail-summary">
-        <div className="gitui-commit-subject">{detail.subject}</div>
-        <div className="gitui-commit-oneliner">
-          <button type="button" className="gitui-meta-hash" onClick={() => void copyHash()} title={detail.hash}>
-            {detail.short}
-            {copied ? ` ✓` : ""}
-          </button>
-          <span>· {detail.author}{detail.authorEmail !== "" ? ` <${detail.authorEmail}>` : ""}</span>
-          <span>· {formatDate(detail.authorDate)}</span>
-          <span style={{ flex: 1 }} />
-          <button type="button" className="gitui-btn" onClick={() => setShowInfo((current) => !current)}>
-            {showInfo ? "▾" : "▸"} {showInfo ? t("history.hideInfo") : t("history.showInfo")}
-          </button>
-        </div>
-        {showInfo && (
-          <>
-            {detail.body !== "" && <pre className="gitui-commit-body">{detail.body}</pre>}
-            <div className="gitui-commit-meta">
-              <div className="gitui-meta-row">
-                <span className="gitui-meta-key">{t("log.author")}</span>
-                <span>{detail.author}{detail.authorEmail !== "" ? ` <${detail.authorEmail}>` : ""}</span>
-              </div>
-              <div className="gitui-meta-row">
-                <span className="gitui-meta-key">{t("log.date")}</span>
-                <span>{formatDate(detail.authorDate)}</span>
-              </div>
-              {detail.parents.length > 0 && (
-                <div className="gitui-meta-row">
-                  <span className="gitui-meta-key">{t("log.parents")}</span>
-                  <span className="gitui-meta-parents">
-                    {detail.parents.map((parent) => (
-                      <span key={parent} className="gitui-meta-hash">{parent.slice(0, 7)}</span>
-                    ))}
-                  </span>
-                </div>
-              )}
-            </div>
-          </>
-        )}
-      </div>
-      )}
-      {!diffFullscreen && (
       <div className="gitui-detail-row">
         <div className="gitui-changed-pane" style={{ width: filesWidth, flex: "none" }}>
           <div className="gitui-changed-title">
@@ -349,6 +328,23 @@ export function HistoryView(props: {
   const [selectedHash, setSelectedHash] = useState<string | null>(null);
   /** Handle CommitDetailPanel's worktree-compare toggle for the context menu. */
   const detailWorktreeRef = useRef<(() => void) | undefined>(undefined);
+  /** Hover popup: lazily loads the commit metadata for the row under the cursor. */
+  const [hoverInfo, setHoverInfo] = useState<{ x: number; y: number; hash: string; detail: CommitDetail | null } | null>(null);
+  const hoverTimer = useRef<number | null>(null);
+  const showHover = (event: React.MouseEvent, hash: string): void => {
+    const { clientX, clientY } = event;
+    setHoverInfo({ x: clientX, y: clientY, hash, detail: null });
+    if (hoverTimer.current !== null) window.clearTimeout(hoverTimer.current);
+    hoverTimer.current = window.setTimeout(() => {
+      void api.commitDetail(dir, hash)
+        .then((d) => setHoverInfo((cur) => (cur !== null && cur.hash === hash ? { ...cur, detail: d } : cur)))
+        .catch(() => setHoverInfo((cur) => (cur !== null && cur.hash === hash ? { ...cur, detail: null } : cur)));
+    }, 180);
+  };
+  const hideHover = (): void => {
+    if (hoverTimer.current !== null) window.clearTimeout(hoverTimer.current);
+    setHoverInfo(null);
+  };
   const [error, setError] = useState<string | null>(null);
   /** Search filter over subject / author / hash. */
   const [query, setQuery] = useState("");
@@ -531,6 +527,19 @@ export function HistoryView(props: {
         label: t("log.worktreeDiff"),
         disabled: hash !== selectedHash,
         onClick: () => detailWorktreeRef.current?.()
+      },
+      { separator: true, label: "" },
+      {
+        label: t("menu.copyMetadata"),
+        onClick: () => {
+          void api.commitDetail(dir, hash).then((d) => navigator.clipboard?.writeText(buildMetadataText(t, d))).catch(() => {});
+        }
+      },
+      {
+        label: t("menu.copyMessage"),
+        onClick: () => {
+          void api.commitDetail(dir, hash).then((d) => navigator.clipboard?.writeText(commitMessageText(d))).catch(() => {});
+        }
       }
     ];
   }
@@ -670,6 +679,8 @@ export function HistoryView(props: {
                   event.preventDefault();
                   setMenu({ x: event.clientX, y: event.clientY, hash: row.hash });
                 }}
+                onMouseEnter={(event) => showHover(event, row.hash)}
+                onMouseLeave={hideHover}
               >
                 <span className="gitui-log-graph" title={row.subject}>
                   {row.graph.length === 0
@@ -689,7 +700,7 @@ export function HistoryView(props: {
                   {row.subject}
                 </span>
                 <span className="gitui-commit-meta">{row.author}</span>
-                <span className="gitui-commit-meta">{formatDate(row.date)}</span>
+                <span className="gitui-commit-meta">{formatShortDate(row.date)}</span>
               </div>
             ))}
           {error !== null && <div className="gitui-error">{error}</div>}
@@ -722,7 +733,48 @@ export function HistoryView(props: {
       {menu !== null && (
         <Menu x={menu.x} y={menu.y} items={commitMenuItems(menu.hash)} onClose={() => setMenu(null)} />
       )}
-    </div>
+      </div>
+      {hoverInfo !== null && (
+        <div
+          className="gitui-hover-card"
+          style={{
+            left: Math.min(hoverInfo.x + 14, window.innerWidth - 400),
+            top: Math.min(hoverInfo.y + 10, window.innerHeight - (hoverInfo.detail ? 340 : 30))
+          }}
+        >
+          {hoverInfo.detail === null ? (
+            <span className="gitui-hover-more">…</span>
+          ) : (
+            <div className="gitui-hover-card-body">
+              <div className="gitui-hover-hash">{hoverInfo.detail.short + " · " + hoverInfo.detail.hash}</div>
+              <div className="gitui-hover-row"><span className="gitui-hover-k">{t("log.author")}</span><span className="gitui-hover-v">{hoverInfo.detail.author + (hoverInfo.detail.authorEmail !== "" ? " <" + hoverInfo.detail.authorEmail + ">" : "")}</span></div>
+              <div className="gitui-hover-row"><span className="gitui-hover-k">{t("log.authorDate")}</span><span className="gitui-hover-v">{formatDate(hoverInfo.detail.authorDate)}</span></div>
+              <div className="gitui-hover-row"><span className="gitui-hover-k">{t("log.committer")}</span><span className="gitui-hover-v">{hoverInfo.detail.committer}</span></div>
+              <div className="gitui-hover-row"><span className="gitui-hover-k">{t("log.commitDate")}</span><span className="gitui-hover-v">{formatDate(hoverInfo.detail.committerDate)}</span></div>
+              {hoverInfo.detail.parents.length > 0 && (
+                <div className="gitui-hover-row"><span className="gitui-hover-k">{t("log.parents")}</span><span className="gitui-hover-v">{hoverInfo.detail.parents.join(", ")}</span></div>
+              )}
+              <div className="gitui-hover-msg">
+                <div className="gitui-commit-subject">{hoverInfo.detail.subject}</div>
+                {hoverInfo.detail.body !== "" && <div>{hoverInfo.detail.body}</div>}
+              </div>
+              {hoverInfo.detail.files.length > 0 && (
+                <div className="gitui-hover-files">
+                  <div className="gitui-hover-files-label">{t("log.files") + " (" + hoverInfo.detail.files.length + ")"}</div>
+                  {hoverInfo.detail.files.slice(0, 20).map((file) => (
+                    <div key={file.path} className="gitui-hover-file">
+                      <span className="gitui-hover-st">{STATUS_LABEL[file.status] ?? file.status}</span>
+                      <span className="gitui-hover-path">{file.path}</span>
+                      {file.additions !== null && <span className="gitui-hover-num">{file.additions + " / -" + (file.deletions ?? 0)}</span>}
+                    </div>
+                  ))}
+                  {hoverInfo.detail.files.length > 20 && <div className="gitui-hover-more">{t("log.showMore", { n: hoverInfo.detail.files.length - 20 })}</div>}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
