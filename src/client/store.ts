@@ -39,6 +39,8 @@ export interface GitUiSnapshot {
   floatWidth: number;
   /** Monotonic refresh counter — bump to force a reload. */
   revision: number;
+  /** Global panel font-scale multiplier (1 = default). Scales the whole panel UI. */
+  fontScale: number;
 }
 
 const DIR_KEY = "dsh-git-ui.dir";
@@ -69,6 +71,32 @@ export const SPLIT_DEFAULTS: Record<GitUiSplitTab, number> = {
 };
 /** Narrowest the left list may be dragged to (px). */
 export const SPLIT_MIN = 120;
+
+/** Global panel font scale: a multiplier (1 = default) applied to every
+ *  font-size in the panel CSS via var(--git-ui-font-scale). */
+export const FONT_SCALE_DEFAULT = 1;
+export const FONT_SCALE_MIN = 0.8;
+export const FONT_SCALE_MAX = 1.6;
+export const FONT_SCALE_STEP = 0.1;
+const FONT_SCALE_KEY = "dsh-git-ui.font-scale";
+
+function clampFontScale(size: number): number {
+  if (!Number.isFinite(size)) return FONT_SCALE_DEFAULT;
+  return Math.min(FONT_SCALE_MAX, Math.max(FONT_SCALE_MIN, Math.round(size * 10) / 10));
+}
+
+function readFontScale(): number {
+  try {
+    const saved = localStorage.getItem(FONT_SCALE_KEY);
+    if (saved !== null) {
+      const value = Number(saved);
+      if (Number.isFinite(value)) return clampFontScale(value);
+    }
+  } catch {
+    /* storage unavailable */
+  }
+  return FONT_SCALE_DEFAULT;
+}
 
 function readNumber(key: string, fallback: number): number {
   try {
@@ -159,7 +187,8 @@ let snapshot: GitUiSnapshot = {
   floatPos: readPos(),
   floatMaximized: false,
   floatWidth: Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, readNumber(WIDTH_KEY, DEFAULT_WIDTH))),
-  revision: 0
+  revision: 0,
+  fontScale: readFontScale()
 };
 
 const listeners = new Set<() => void>();
@@ -300,6 +329,22 @@ export function gitUiSetFloatWidth(width: number): void {
   } catch {
     /* storage unavailable */
   }
+}
+
+/** Set + persist the global panel font-scale multiplier (clamped). */
+export function gitUiSetFontScale(scale: number): void {
+  const clamped = clampFontScale(scale);
+  set({ fontScale: clamped });
+  try {
+    localStorage.setItem(FONT_SCALE_KEY, String(clamped));
+  } catch {
+    /* storage unavailable */
+  }
+}
+
+/** Adjust the global panel font-scale by a step, clamped to the range. */
+export function gitUiAdjustFontScale(delta: number): void {
+  gitUiSetFontScale(snapshot.fontScale + delta);
 }
 
 export {

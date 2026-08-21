@@ -431,9 +431,10 @@ export function HistoryView(props: {
       .branches(dir)
       .then((value) => {
         if (!alive) return;
-        const names = value.branches
-          .filter((b) => !b.name.startsWith("remotes/"))
-          .map((b) => b.name);
+        // Local branches (bare names) + remote-tracking branches (prefixed
+        // "remotes/<remote>/<branch>", a valid git rev), so the branch filter
+        // dropdown can also target a remote branch.
+        const names = value.branches.map((b) => b.name);
         setBranches(names);
         // Default the branch filter to the CURRENT branch (IDEA behavior);
         // never override a filter the user already picked.
@@ -538,6 +539,11 @@ export function HistoryView(props: {
     ];
   }
 
+  // Branch filter options: local branches (bare names) + remote-tracking
+  // branches (prefixed "remotes/<remote>/<branch>"), grouped in the dropdown.
+  const localBranchOptions = branches.filter((b) => !b.startsWith("remotes/"));
+  const remoteBranchOptions = branches.filter((b) => b.startsWith("remotes/"));
+
   return (
     <div className="gitui-history-layout">
       <div
@@ -588,9 +594,18 @@ export function HistoryView(props: {
             onChange={(event) => setBranchFilter(event.target.value)}
           >
             <option value="">{t("history.allBranches")}</option>
-            {branches.map((name) => (
-              <option key={name} value={name}>{name}</option>
-            ))}
+            <optgroup label={t("branch.local")}>
+              {localBranchOptions.map((name) => (
+                <option key={name} value={name}>{name}</option>
+              ))}
+            </optgroup>
+            {remoteBranchOptions.length > 0 && (
+              <optgroup label={t("branch.remote")}>
+                {remoteBranchOptions.map((name) => (
+                  <option key={name} value={name}>{name}</option>
+                ))}
+              </optgroup>
+            )}
           </select>
           <select
             className="gitui-dir"

@@ -16,12 +16,16 @@ import { Menu, type MenuItem } from "./Menu.js";
 import { PushDialog } from "./PushDialog.js";
 import { RebaseDialog } from "./RebaseDialog.js";
 import {
+  FONT_SCALE_MAX,
+  FONT_SCALE_MIN,
+  FONT_SCALE_STEP,
   GIT_UI_MAX_HEIGHT,
   GIT_UI_MAX_WIDTH,
   GIT_UI_MIN_HEIGHT,
   GIT_UI_MIN_WIDTH,
   SPLIT_DEFAULTS,
   SPLIT_MIN,
+  gitUiAdjustFontScale,
   gitUiFollowCwd,
   gitUiSetDir,
   gitUiSetFloating,
@@ -460,7 +464,7 @@ export function GitPanel(props: {
 }): JSX.Element {
   const { t, api, useSessions, useWorkspaces } = props;
   const snapshot = useGitUi();
-  const { open, dir, followSession, floating, fullscreen, panelHeight, floatPos, floatMaximized, floatWidth, status, statusLoading, statusError, statusErrorCode } = snapshot;
+  const { open, dir, followSession, floating, fullscreen, panelHeight, floatPos, floatMaximized, floatWidth, status, statusLoading, statusError, statusErrorCode, fontScale } = snapshot;
 
   const [dirDraft, setDirDraft] = useState(dir);
   const [tab, setTab] = useState<"changes" | "files" | "merge" | "history" | "branches" | "stash" | "remotes" | "config">("changes");
@@ -1685,6 +1689,12 @@ export function GitPanel(props: {
     </>
   );
 
+  // Global panel font-scale is a CSS custom property applied on the root so
+  // every derived font-size in the stylesheet scales with it (1 = default).
+  const fontScaleStyle: React.CSSProperties = {
+    "--git-ui-font-scale": String(fontScale)
+  } as unknown as React.CSSProperties;
+
   const resizeHandle = (
     <div
       className="gitui-resize"
@@ -1858,6 +1868,26 @@ export function GitPanel(props: {
         </button>
       )}
 
+      <span className="gitui-tb-sep" />
+      <button
+        type="button"
+        className="gitui-btn gitui-font-btn"
+        title={t("panel.fontScaleSmaller")}
+        disabled={fontScale <= FONT_SCALE_MIN}
+        onClick={() => gitUiAdjustFontScale(-FONT_SCALE_STEP)}
+      >
+        A−
+      </button>
+      <button
+        type="button"
+        className="gitui-btn gitui-font-btn"
+        title={t("panel.fontScaleLarger")}
+        disabled={fontScale >= FONT_SCALE_MAX}
+        onClick={() => gitUiAdjustFontScale(FONT_SCALE_STEP)}
+      >
+        A+
+      </button>
+
       <div className="gitui-win-controls">
         <button
           type="button"
@@ -1902,7 +1932,7 @@ export function GitPanel(props: {
     // Detach opens maximized (fills the viewport); drag/resize restore it.
     const maximized = floatMaximized === true;
     return (
-      <div data-git-ui-root="">
+      <div data-git-ui-root="" style={fontScaleStyle}>
         <div
           className="gitui-float"
           style={
@@ -1940,7 +1970,7 @@ export function GitPanel(props: {
   }
 
   return (
-    <div data-git-ui-root="">
+    <div data-git-ui-root="" style={fontScaleStyle}>
       <div
         className={"gitui-panel" + (fullscreen ? " gitui-fullscreen" : "")}
         style={fullscreen ? undefined : { height: `${panelHeight}px` }}

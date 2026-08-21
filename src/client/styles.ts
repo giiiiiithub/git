@@ -21,8 +21,10 @@ const CSS = `
   --git-ui-mod: rgba(231, 239, 250, .75);
   --git-ui-accent: var(--dsw-alias-brand-primary, #4d9fff);
   box-sizing: border-box;
+  /* Global UI font-scale multiplier (overridden inline by the panel root). */
+  --git-ui-font-scale: 1;
   color: var(--git-ui-text);
-  font-size: 13px;
+  font-size: calc(13px * var(--git-ui-font-scale, 1));
   line-height: 1.5;
 }
 [data-git-ui-root] *, [data-git-ui-root] *::before, [data-git-ui-root] *::after { box-sizing: border-box; }
@@ -38,7 +40,7 @@ const CSS = `
   padding: 6px 10px;
   border-bottom: 1px solid var(--git-ui-border);
   background: var(--dsw-alias-bg-layer-2, rgba(128,128,128,.1));
-  font-size: 12px; font-weight: 600;
+  font-size: calc(12px * var(--git-ui-font-scale, 1)); font-weight: 600;
   flex: none;
   user-select: none;
   position: relative;
@@ -48,13 +50,13 @@ const CSS = `
 .gitui-titlebar-branch {
   flex: none; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   background: transparent; color: var(--git-ui-text);
-  border: 1px solid transparent; border-radius: 6px; padding: 1px 4px; font-size: 12px; font-weight: 600; outline: none;
+  border: 1px solid transparent; border-radius: 6px; padding: 1px 4px; font-size: calc(12px * var(--git-ui-font-scale, 1)); font-weight: 600; outline: none;
   cursor: pointer;
 }
 .gitui-titlebar-branch:hover { border-color: var(--git-ui-border); }
 .gitui-titlebar-branch:focus { border-color: var(--git-ui-accent); }
 .gitui-titlebar-branch option { background: var(--git-ui-bg); color: var(--git-ui-text); }
-.gitui-titlebar-ahead { flex: none; font-size: 11px; color: var(--git-ui-text-dim); }
+.gitui-titlebar-ahead { flex: none; font-size: calc(11px * var(--git-ui-font-scale, 1)); color: var(--git-ui-text-dim); }
 .gitui-win-controls {
   display: flex; align-items: center; gap: 2px;
   /* Push the window controls to the far right; when they wrap onto their own
@@ -64,7 +66,7 @@ const CSS = `
 .gitui-win-btn {
   background: transparent; border: none; color: var(--git-ui-text-dim);
   width: 26px; height: 24px; border-radius: 6px;
-  font-size: 13px; line-height: 1; cursor: pointer;
+  font-size: calc(13px * var(--git-ui-font-scale, 1)); line-height: 1; cursor: pointer;
   display: inline-flex; align-items: center; justify-content: center;
 }
 .gitui-win-btn:hover { background: rgba(128,128,128,.18); color: var(--git-ui-text); }
@@ -82,7 +84,7 @@ const CSS = `
 .gitui-badge {
   min-width: 18px; height: 18px; padding: 0 5px;
   border-radius: 9px; background: var(--git-ui-accent); color: #fff;
-  font-size: 11px; line-height: 18px; text-align: center; font-weight: 600;
+  font-size: calc(11px * var(--git-ui-font-scale, 1)); line-height: calc(18px * var(--git-ui-font-scale, 1)); text-align: center; font-weight: 600;
 }
 .gitui-badge-danger { background: var(--dsw-alias-state-error-primary, #f85149); }
 
@@ -129,7 +131,7 @@ const CSS = `
   box-shadow: 0 10px 44px rgba(0, 0, 0, .38);
   overflow: hidden;
   color: var(--git-ui-text);
-  font-size: 13px;
+  font-size: calc(13px * var(--git-ui-font-scale, 1));
   line-height: 1.5;
 }
 .gitui-float-body { display: flex; flex-direction: column; flex: 1; min-height: 0; }
@@ -137,7 +139,7 @@ const CSS = `
   flex: 1; min-width: 0;
   background: transparent; color: var(--git-ui-text);
   border: 1px solid var(--git-ui-border); border-radius: 6px;
-  padding: 3px 8px; font-size: 12px; outline: none;
+  padding: 3px 8px; font-size: calc(12px * var(--git-ui-font-scale, 1)); outline: none;
 }
 .gitui-dir:focus { border-color: var(--git-ui-accent); }
 .gitui-dir-wrap { position: relative; flex: 0 1 180px; min-width: 120px; display: flex; }
@@ -156,7 +158,7 @@ const CSS = `
 }
 .gitui-dir-option {
   padding: 6px 10px;
-  font-size: 12px;
+  font-size: calc(12px * var(--git-ui-font-scale, 1));
   cursor: pointer;
   white-space: nowrap;
   overflow: hidden;
@@ -168,7 +170,7 @@ const CSS = `
 .gitui-btn {
   background: transparent; color: var(--git-ui-text);
   border: 1px solid var(--git-ui-border); border-radius: 6px;
-  padding: 3px 10px; font-size: 12px; cursor: pointer;
+  padding: 3px 10px; font-size: calc(12px * var(--git-ui-font-scale, 1)); cursor: pointer;
   white-space: nowrap;
 }
 .gitui-btn:hover:not(:disabled) { border-color: var(--git-ui-accent); color: var(--git-ui-accent); }
@@ -181,7 +183,7 @@ const CSS = `
 .gitui-tabs { display: flex; gap: 4px; padding: 6px 10px 0; }
 .gitui-tab {
   padding: 4px 12px; border-radius: 6px 6px 0 0; cursor: pointer;
-  color: var(--git-ui-text-dim); font-size: 12px; border: 1px solid transparent; border-bottom: none;
+  color: var(--git-ui-text-dim); font-size: calc(12px * var(--git-ui-font-scale, 1)); border: 1px solid transparent; border-bottom: none;
 }
 .gitui-tab-active { color: var(--git-ui-text); background: var(--git-ui-bg); border-color: var(--git-ui-border); }
 .gitui-tab-count { margin-left: 4px; opacity: .75; }
@@ -202,7 +204,7 @@ const CSS = `
 .gitui-pane-min {
   background: transparent; border: none; color: var(--git-ui-text-dim);
   width: 22px; height: 20px; border-radius: 5px;
-  font-size: 14px; line-height: 1; cursor: pointer;
+  font-size: calc(14px * var(--git-ui-font-scale, 1)); line-height: 1; cursor: pointer;
   display: inline-flex; align-items: center; justify-content: center;
 }
 .gitui-pane-min:hover { background: rgba(128,128,128,.18); color: var(--git-ui-text); }
@@ -216,7 +218,7 @@ const CSS = `
 .gitui-pane-restore:hover { background: rgba(128,128,128,.12); color: var(--git-ui-text); }
 .gitui-pane-restore-btn {
   background: transparent; border: none; color: inherit; cursor: pointer;
-  font-size: 10px; line-height: 1; padding: 2px;
+  font-size: calc(10px * var(--git-ui-font-scale, 1)); line-height: 1; padding: 2px;
 }
 /* Vertical drag handle between the left list and the right detail pane. */
 .gitui-splitter {
@@ -232,7 +234,7 @@ const CSS = `
   background: var(--git-ui-accent); width: 2px; left: 2.5px;
 }
 .gitui-group-title {
-  padding: 0 12px; font-size: 11px; color: var(--git-ui-text-dim);
+  padding: 0 12px; font-size: calc(11px * var(--git-ui-font-scale, 1)); color: var(--git-ui-text-dim);
   text-transform: uppercase; letter-spacing: .04em;
   display: flex; justify-content: space-between; align-items: center;
   box-sizing: border-box; overflow: hidden;
@@ -240,22 +242,22 @@ const CSS = `
 .gitui-group-actions { display: flex; align-items: center; gap: 2px; }
 .gitui-group-actions button {
   background: transparent; border: none; color: var(--git-ui-text-dim);
-  cursor: pointer; font-size: 11px; padding: 1px 4px; border-radius: 4px; line-height: 1.2;
+  cursor: pointer; font-size: calc(11px * var(--git-ui-font-scale, 1)); padding: 1px 4px; border-radius: 4px; line-height: 1.2;
 }
 .gitui-group-actions button:hover { color: var(--git-ui-accent); background: rgba(128, 128, 128, .15); }
 /* Group titlebar glyphs (expand-all / collapse-all / refresh), IDEA style. */
 .gitui-group-chev { display: block; }
-.gitui-group-count { font-size: 11px; margin-left: 2px; }
+.gitui-group-count { font-size: calc(11px * var(--git-ui-font-scale, 1)); margin-left: 2px; }
 
 /* file tree tab (git-independent browser / editor) */
 .gitui-filetree { display: flex; flex-direction: column; flex: 1; min-height: 0; min-width: 0; }
 .gitui-filetree-toolbar {
   display: flex; align-items: center; gap: 6px; padding: 6px 10px;
-  border-bottom: 1px solid var(--git-ui-border); font-size: 12px; flex: none;
+  border-bottom: 1px solid var(--git-ui-border); font-size: calc(12px * var(--git-ui-font-scale, 1)); flex: none;
 }
 .gitui-filetree-dir {
   flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  color: var(--git-ui-text-dim); font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 11px;
+  color: var(--git-ui-text-dim); font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: calc(11px * var(--git-ui-font-scale, 1));
 }
 .gitui-filetree-body { display: flex; flex: 1; min-height: 0; min-width: 0; }
 .gitui-filetree-tree {
@@ -265,23 +267,23 @@ const CSS = `
 .gitui-filetree-editor { flex: 1; display: flex; flex-direction: column; min-width: 0; min-height: 0; }
 .gitui-filetree-editor-header {
   display: flex; align-items: center; gap: 8px; padding: 4px 10px;
-  border-bottom: 1px solid var(--git-ui-border); font-size: 12px; flex: none;
+  border-bottom: 1px solid var(--git-ui-border); font-size: calc(12px * var(--git-ui-font-scale, 1)); flex: none;
 }
 .gitui-filetree-textarea {
   flex: 1; min-height: 0; width: 100%; box-sizing: border-box; resize: none;
   background: transparent; color: var(--git-ui-text); border: none; outline: none;
   padding: 8px 10px; font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
-  font-size: 12px; line-height: 1.55; white-space: pre; tab-size: 4;
+  font-size: calc(12px * var(--git-ui-font-scale, 1)); line-height: 1.55; white-space: pre; tab-size: 4;
 }
 .gitui-push-form {
   display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
   padding: 6px 10px 8px; border-bottom: 1px solid var(--git-ui-border);
-  background: rgba(128, 128, 128, .06); font-size: 12px;
+  background: rgba(128, 128, 128, .06); font-size: calc(12px * var(--git-ui-font-scale, 1));
 }
 .gitui-push-input {
   flex: 0 1 160px; min-width: 90px; background: transparent; color: var(--git-ui-text);
   border: 1px solid var(--git-ui-border); border-radius: 4px; padding: 2px 6px;
-  font-size: 12px; font-family: ui-monospace, "Cascadia Code", Consolas, monospace; outline: none;
+  font-size: calc(12px * var(--git-ui-font-scale, 1)); font-family: ui-monospace, "Cascadia Code", Consolas, monospace; outline: none;
 }
 .gitui-push-input:focus { border-color: var(--git-ui-accent); }
 .gitui-push-arrow { color: var(--git-ui-text-dim); flex: none; }
@@ -291,14 +293,14 @@ const CSS = `
 .gitui-tree-chev { display: block; color: var(--git-ui-text-dim); }
 .gitui-tree-chev-rot { display: inline-flex; }
 .gitui-tree-blank { width: 12px; display: inline-block; }
-.gitui-tree-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
-.gitui-tree-loading { color: var(--git-ui-text-dim); font-size: 12px; }
-.gitui-tree-warn { color: var(--git-ui-text-dim); font-size: 11px; }
+.gitui-tree-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: calc(12px * var(--git-ui-font-scale, 1)); }
+.gitui-tree-loading { color: var(--git-ui-text-dim); font-size: calc(12px * var(--git-ui-font-scale, 1)); }
+.gitui-tree-warn { color: var(--git-ui-text-dim); font-size: calc(11px * var(--git-ui-font-scale, 1)); }
 
 /* directory tree */
 .gitui-dir-node {
   display: flex; align-items: center; gap: 2px;
-  padding: 0 10px 0 4px; cursor: pointer; font-size: 12px; user-select: none;
+  padding: 0 10px 0 4px; cursor: pointer; font-size: calc(12px * var(--git-ui-font-scale, 1)); user-select: none;
   box-sizing: border-box; overflow: hidden;
 }
 .gitui-dir-node:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,.12)); }
@@ -319,7 +321,7 @@ const CSS = `
 .gitui-dir-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .gitui-dir-node .gitui-file-action { visibility: hidden; }
 .gitui-dir-node:hover .gitui-file-action { visibility: visible; }
-.gitui-dir-count { color: var(--git-ui-text-dim); font-size: 10px; margin-left: 2px; }
+.gitui-dir-count { color: var(--git-ui-text-dim); font-size: calc(10px * var(--git-ui-font-scale, 1)); margin-left: 2px; }
 .gitui-dir-children { padding-left: 14px; }
 /* Fixed row heights keep the virtual list aligned (24px per row). */
 .gitui-file {
@@ -330,22 +332,22 @@ const CSS = `
 }
 .gitui-file:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,.12)); }
 .gitui-file-selected { background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,.18)); }
-.gitui-file-path { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+.gitui-file-path { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: calc(12px * var(--git-ui-font-scale, 1)); }
 .gitui-check { margin: 0; flex: none; width: 13px; height: 13px; accent-color: var(--git-ui-accent); cursor: pointer; }
 .gitui-config-key { flex: none; min-width: 180px; color: var(--git-ui-accent); }
-.gitui-remote-icon { flex: none; width: 14px; text-align: center; font-size: 11px; color: var(--git-ui-text-dim); }
-.gitui-config-value { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: var(--git-ui-text-dim); }
+.gitui-remote-icon { flex: none; width: 14px; text-align: center; font-size: calc(11px * var(--git-ui-font-scale, 1)); color: var(--git-ui-text-dim); }
+.gitui-config-value { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: calc(12px * var(--git-ui-font-scale, 1)); color: var(--git-ui-text-dim); }
 .gitui-config-edit { flex: 1; min-width: 120px; }
 .gitui-config-scope { margin-bottom: 4px; }
 /* Config tab: its own full-height scroll (the shared branches scroll is
    capped at 280px for the branch/tag blocks). */
 .gitui-config-scroll { flex: 1; overflow-y: auto; min-height: 0; padding-bottom: 8px; }
 .gitui-config-scope-hint {
-  flex: none; font-size: 10px; color: var(--git-ui-text-dim); opacity: .7;
+  flex: none; font-size: calc(10px * var(--git-ui-font-scale, 1)); color: var(--git-ui-text-dim); opacity: .7;
   max-width: 45%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .gitui-config-note {
-  padding: 4px 12px 8px; font-size: 11px; color: var(--git-ui-text-dim); opacity: .8; line-height: 1.5;
+  padding: 4px 12px 8px; font-size: calc(11px * var(--git-ui-font-scale, 1)); color: var(--git-ui-text-dim); opacity: .8; line-height: 1.5;
 }
 /* ── stash tab ──────────────────────────────────────────────────────────── */
 .gitui-stash-create {
@@ -355,7 +357,7 @@ const CSS = `
 .gitui-stash-item { border-bottom: 1px solid var(--git-ui-border); }
 .gitui-stash-show {
   padding: 4px 12px 8px 24px; font-family: ui-monospace, Consolas, monospace;
-  font-size: 11px; color: var(--git-ui-text-dim); line-height: 1.5;
+  font-size: calc(11px * var(--git-ui-font-scale, 1)); color: var(--git-ui-text-dim); line-height: 1.5;
   border-top: 1px dashed var(--git-ui-border);
 }
 .gitui-stash-show-line { white-space: pre; }
@@ -365,25 +367,25 @@ const CSS = `
   margin: 4px 8px 8px; padding: 8px 10px; border: 1px solid var(--git-ui-border);
   border-radius: 8px; background: rgba(128, 128, 128, .06);
 }
-.gitui-auth-guide-title { font-size: 12px; font-weight: 600; color: var(--git-ui-text); margin-bottom: 4px; }
-.gitui-auth-guide-body { font-size: 11px; line-height: 1.6; color: var(--git-ui-text-dim); }
+.gitui-auth-guide-title { font-size: calc(12px * var(--git-ui-font-scale, 1)); font-weight: 600; color: var(--git-ui-text); margin-bottom: 4px; }
+.gitui-auth-guide-body { font-size: calc(11px * var(--git-ui-font-scale, 1)); line-height: 1.6; color: var(--git-ui-text-dim); }
 .gitui-auth-guide-link {
-  display: inline-block; margin-top: 6px; font-size: 11px; color: var(--git-ui-accent);
+  display: inline-block; margin-top: 6px; font-size: calc(11px * var(--git-ui-font-scale, 1)); color: var(--git-ui-accent);
   text-decoration: none;
 }
 .gitui-auth-guide-link:hover { text-decoration: underline; }
 .gitui-auth-guide-warn { border-color: var(--dsw-alias-state-warn-primary, #d29922); }
 .gitui-auth-guide-missing {
-  margin-top: 6px; font-size: 11px; color: var(--dsw-alias-state-warn-primary, #d29922); line-height: 1.5;
+  margin-top: 6px; font-size: calc(11px * var(--git-ui-font-scale, 1)); color: var(--dsw-alias-state-warn-primary, #d29922); line-height: 1.5;
 }
-.gitui-file-status { font-size: 10px; width: 14px; text-align: center; font-weight: 700; }
+.gitui-file-status { font-size: calc(10px * var(--git-ui-font-scale, 1)); width: 14px; text-align: center; font-weight: 700; }
 .gitui-st-added { color: var(--dsw-alias-state-success-primary, #3fb950); }
 .gitui-st-modified { color: var(--dsw-alias-state-warn-primary, #d29922); }
 .gitui-st-deleted { color: var(--dsw-alias-state-error-primary, #f85149); }
 .gitui-st-unmerged { color: var(--dsw-alias-state-error-primary, #f85149); }
 .gitui-file-action {
   background: transparent; border: none; cursor: pointer; color: var(--git-ui-text-dim);
-  font-size: 11px; padding: 1px 4px; border-radius: 4px; visibility: hidden;
+  font-size: calc(11px * var(--git-ui-font-scale, 1)); padding: 1px 4px; border-radius: 4px; visibility: hidden;
 }
 .gitui-file:hover .gitui-file-action { visibility: visible; }
 .gitui-file-action:hover { color: var(--git-ui-accent); background: rgba(128,128,128,.15); }
@@ -391,14 +393,14 @@ const CSS = `
 .gitui-detail { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
 .gitui-detail-header {
   display: flex; align-items: center; gap: 8px; padding: 6px 10px;
-  border-bottom: 1px solid var(--git-ui-border); font-size: 12px;
+  border-bottom: 1px solid var(--git-ui-border); font-size: calc(12px * var(--git-ui-font-scale, 1));
 }
 .gitui-diff { flex: 1; display: flex; flex-direction: column; min-height: 0; min-width: 0; }
 /* Column captions above the diff ("HEAD" / "Working Tree" etc.), aligned
    with the two 1fr columns of .gitui-diff-row below. */
 .gitui-diff-sides {
   flex: none; display: grid; grid-template-columns: 1fr 1fr;
-  border-bottom: 1px solid var(--git-ui-border); font-size: 11px;
+  border-bottom: 1px solid var(--git-ui-border); font-size: calc(11px * var(--git-ui-font-scale, 1));
 }
 .gitui-diff-side {
   display: flex; align-items: center; gap: 6px;
@@ -465,7 +467,7 @@ const CSS = `
   overflow: hidden;
   display: flex;
   font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
-  font-size: 12px; line-height: 1.55;
+  font-size: calc(12px * var(--git-ui-font-scale, 1)); line-height: 1.55;
   white-space: pre;
 }
 /* The content layer scrolls inside the fixed-background cell: the row
@@ -544,22 +546,22 @@ const CSS = `
 .gitui-diff-toolbar {
   flex: none; display: flex; align-items: center; gap: 6px;
   padding: 3px 10px; border-bottom: 1px solid var(--git-ui-border);
-  font-size: 12px;
+  font-size: calc(12px * var(--git-ui-font-scale, 1));
 }
 .gitui-hunk-gap {
   /* Fixed height so the left hunk header and the right spacer column stay
      vertically aligned (they live in separate DOM subtrees). */
   height: 23px;
-  padding: 2px 10px; color: var(--git-ui-text-dim); font-size: 11px;
+  padding: 2px 10px; color: var(--git-ui-text-dim); font-size: calc(11px * var(--git-ui-font-scale, 1));
   background: var(--dsw-alias-bg-layer-2, rgba(128,128,128,.08));
   border-top: 1px solid var(--git-ui-border); border-bottom: 1px solid var(--git-ui-border);
 }
 .gitui-hunk-head { display: flex; align-items: center; gap: 6px; }
 .gitui-hunk-meta { font-family: ui-monospace, "Cascadia Code", Consolas, monospace; }
-.gitui-hunk-btn { padding: 0 6px; font-size: 11px; }
+.gitui-hunk-btn { padding: 0 6px; font-size: calc(11px * var(--git-ui-font-scale, 1)); }
 .gitui-fold-row {
   display: block; width: 100%; text-align: center;
-  padding: 2px 10px; color: var(--git-ui-text-dim); font-size: 11px;
+  padding: 2px 10px; color: var(--git-ui-text-dim); font-size: calc(11px * var(--git-ui-font-scale, 1));
   background: var(--dsw-alias-bg-layer-2, rgba(128,128,128,.06));
   border: none; border-bottom: 1px solid var(--git-ui-border);
   cursor: pointer;
@@ -576,20 +578,20 @@ const CSS = `
 .gitui-diff-img-col:last-child { border-right: none; }
 .gitui-diff-img { max-width: 100%; max-height: 100%; object-fit: contain; }
 .gitui-diff-img-notice {
-  flex: none; padding: 6px 10px; text-align: center; font-size: 12px;
+  flex: none; padding: 6px 10px; text-align: center; font-size: calc(12px * var(--git-ui-font-scale, 1));
   color: var(--git-ui-text-dim); border-top: 1px solid var(--git-ui-border);
 }
 /* IDEA-style diff toolbar dropdowns (view mode / whitespace / highlight). */
 .gitui-dd { position: relative; display: inline-flex; }
 .gitui-dd-btn {
   display: inline-flex; align-items: center; gap: 4px;
-  padding: 1px 8px; font-size: 12px; color: inherit;
+  padding: 1px 8px; font-size: calc(12px * var(--git-ui-font-scale, 1)); color: inherit;
   background: transparent; border: 1px solid transparent; border-radius: 4px;
   cursor: pointer; white-space: nowrap;
 }
 .gitui-dd-btn:hover { background: var(--dsw-alias-bg-layer-3, rgba(128,128,128,.12)); }
 .gitui-dd-btn:disabled { opacity: .55; cursor: default; }
-.gitui-dd-caret { font-size: 9px; color: var(--git-ui-text-dim); }
+.gitui-dd-caret { font-size: calc(9px * var(--git-ui-font-scale, 1)); color: var(--git-ui-text-dim); }
 .gitui-dd-menu {
   position: absolute; top: calc(100% + 2px); left: 0; z-index: 3000;
   min-width: 200px; padding: 4px 0;
@@ -598,7 +600,7 @@ const CSS = `
   box-shadow: 0 6px 20px rgba(0,0,0,.18);
 }
 .gitui-dd-item {
-  padding: 5px 12px; font-size: 12px; cursor: pointer;
+  padding: 5px 12px; font-size: calc(12px * var(--git-ui-font-scale, 1)); cursor: pointer;
   display: flex; align-items: center; gap: 8px;
 }
 .gitui-dd-item:hover { background: var(--dsw-alias-bg-layer-3, rgba(128,128,128,.12)); }
@@ -607,9 +609,9 @@ const CSS = `
 .gitui-dd-menu-ws .gitui-dd-item { white-space: nowrap; }
 .gitui-dd-item:not(.gitui-dd-item-sel)::before { content: ""; width: 14px; }
 .gitui-tb-sep { width: 1px; height: 16px; background: var(--git-ui-border); margin: 0 2px; }
-.gitui-font-btn { min-width: 24px; padding: 0 5px; font-size: 12px; }
+.gitui-font-btn { min-width: 24px; padding: 0 5px; font-size: calc(12px * var(--git-ui-font-scale, 1)); }
 .gitui-diff-count {
-  font-size: 11px; color: var(--git-ui-text-dim);
+  font-size: calc(11px * var(--git-ui-font-scale, 1)); color: var(--git-ui-text-dim);
   font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
   padding: 0 4px; user-select: none;
 }
@@ -640,7 +642,7 @@ const CSS = `
   background: var(--dsw-alias-bg-layer-2, #2b2d30);
   border: 1px solid var(--git-ui-border); border-radius: 6px;
   padding: 4px; box-shadow: 0 6px 20px rgba(0,0,0,.35);
-  font-size: 12px; user-select: none;
+  font-size: calc(12px * var(--git-ui-font-scale, 1)); user-select: none;
 }
 .gitui-menu-list { display: flex; flex-direction: column; }
 .gitui-menu-item {
@@ -654,7 +656,7 @@ const CSS = `
 .gitui-menu-item-disabled { opacity: .45; cursor: default; }
 .gitui-menu-item-disabled:hover { background: transparent; color: var(--git-ui-text); }
 .gitui-menu-label { flex: 1; }
-.gitui-menu-arrow { font-size: 10px; opacity: .7; }
+.gitui-menu-arrow { font-size: calc(10px * var(--git-ui-font-scale, 1)); opacity: .7; }
 .gitui-menu-sep { height: 1px; margin: 3px 6px; background: var(--git-ui-border); }
 .gitui-menu-sub { position: fixed; }
 
@@ -686,7 +688,7 @@ const CSS = `
 /* ── history filters / colored graph ────────────────────────────────────── */
 .gitui-history-tools { display: flex; flex-direction: column; gap: 4px; padding: 6px 8px; border-bottom: 1px solid var(--git-ui-border); }
 .gitui-log-graph { flex: none; font-weight: 600; }
-.gitui-group-menu-btn { border: none; background: transparent; color: var(--git-ui-text-dim); cursor: pointer; padding: 0 4px; font-size: 13px; }
+.gitui-group-menu-btn { border: none; background: transparent; color: var(--git-ui-text-dim); cursor: pointer; padding: 0 4px; font-size: calc(13px * var(--git-ui-font-scale, 1)); }
 .gitui-group-menu-btn:hover { color: var(--git-ui-text); }
 
 .gitui-commit {
@@ -697,17 +699,17 @@ const CSS = `
   width: 100%; resize: vertical; min-height: 54px; max-height: 140px;
   background: transparent; color: var(--git-ui-text);
   border: 1px solid var(--git-ui-border); border-radius: 6px; padding: 6px 8px;
-  font-size: 12px; font-family: inherit; outline: none;
+  font-size: calc(12px * var(--git-ui-font-scale, 1)); font-family: inherit; outline: none;
 }
 .gitui-commit textarea:focus { border-color: var(--git-ui-accent); }
 .gitui-commit-row { display: flex; align-items: center; gap: 10px; }
-.gitui-commit-row label { display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--git-ui-text-dim); cursor: pointer; }
-.gitui-error { color: var(--dsw-alias-state-error-primary, #f85149); font-size: 12px; padding: 2px 10px; }
-.gitui-ok { color: var(--dsw-alias-state-success-primary, #3fb950); font-size: 12px; padding: 2px 10px; }
+.gitui-commit-row label { display: flex; align-items: center; gap: 4px; font-size: calc(12px * var(--git-ui-font-scale, 1)); color: var(--git-ui-text-dim); cursor: pointer; }
+.gitui-error { color: var(--dsw-alias-state-error-primary, #f85149); font-size: calc(12px * var(--git-ui-font-scale, 1)); padding: 2px 10px; }
+.gitui-ok { color: var(--dsw-alias-state-success-primary, #3fb950); font-size: calc(12px * var(--git-ui-font-scale, 1)); padding: 2px 10px; }
 .gitui-notrepo {
   display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
   padding: 10px; margin: 4px 10px; border: 1px dashed var(--git-ui-border);
-  border-radius: 8px; color: var(--git-ui-text-dim); font-size: 12px;
+  border-radius: 8px; color: var(--git-ui-text-dim); font-size: calc(12px * var(--git-ui-font-scale, 1));
 }
 .gitui-notrepo-text { flex: 1 1 auto; }
 
@@ -731,18 +733,18 @@ const CSS = `
 }
 .gitui-ops-title {
   display: flex; align-items: center; justify-content: space-between;
-  font-size: 12px; font-weight: 600; padding: 2px 4px;
+  font-size: calc(12px * var(--git-ui-font-scale, 1)); font-weight: 600; padding: 2px 4px;
 }
 .gitui-ops-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .gitui-ops-list { border-top: 1px solid var(--git-ui-border); padding-top: 6px; max-height: 220px; overflow-y: auto; }
 
 /* merge view */
 .gitui-merge-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
-.gitui-merge-label { font-size: 12px; color: var(--git-ui-text-dim); flex: none; }
+.gitui-merge-label { font-size: calc(12px * var(--git-ui-font-scale, 1)); color: var(--git-ui-text-dim); flex: none; }
 .gitui-merge-arrow { color: var(--git-ui-text-dim); flex: none; }
 .gitui-merge-option {
   display: inline-flex; align-items: center; gap: 4px;
-  font-size: 12px; color: var(--git-ui-text-dim); cursor: pointer; user-select: none;
+  font-size: calc(12px * var(--git-ui-font-scale, 1)); color: var(--git-ui-text-dim); cursor: pointer; user-select: none;
 }
 .gitui-merge-list { flex: 1; overflow-y: auto; padding: 6px 0; }
 .gitui-conflict {
@@ -752,7 +754,7 @@ const CSS = `
 .gitui-conflict-head {
   display: flex; align-items: center; gap: 8px; padding: 6px 10px;
   background: var(--dsw-alias-bg-layer-2, rgba(128,128,128,.08));
-  font-size: 12px;
+  font-size: calc(12px * var(--git-ui-font-scale, 1));
 }
 .gitui-conflict-body { padding: 8px 10px; }
 
@@ -760,11 +762,11 @@ const CSS = `
 .gitui-mr { display: flex; flex-direction: column; flex: 1; min-height: 0; }
 .gitui-mr-toolbar {
   display: flex; align-items: center; gap: 6px; padding: 4px 10px;
-  border-bottom: 1px solid var(--git-ui-border); font-size: 12px; flex-wrap: wrap;
+  border-bottom: 1px solid var(--git-ui-border); font-size: calc(12px * var(--git-ui-font-scale, 1)); flex-wrap: wrap;
 }
 .gitui-mr-accept-ours { color: var(--git-ui-accent); }
 .gitui-mr-accept-theirs { color: var(--dsw-alias-state-warn-primary, #d29922); }
-.gitui-mr-count { color: var(--git-ui-text-dim); margin-left: auto; font-size: 11px; }
+.gitui-mr-count { color: var(--git-ui-text-dim); margin-left: auto; font-size: calc(11px * var(--git-ui-font-scale, 1)); }
 .gitui-mr-cols { display: flex; flex: 1; min-height: 0; }
 .gitui-mr-col {
   flex: 1; min-width: 0;
@@ -773,7 +775,7 @@ const CSS = `
 }
 .gitui-mr-col:last-child { border-right: none; }
 .gitui-mr-col-title {
-  padding: 4px 8px; font-size: 11px; font-weight: 600;
+  padding: 4px 8px; font-size: calc(11px * var(--git-ui-font-scale, 1)); font-weight: 600;
   border-bottom: 1px solid var(--git-ui-border);
   color: var(--git-ui-text-dim);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: none;
@@ -784,14 +786,14 @@ const CSS = `
 .gitui-mr-title-theirs { color: #b45309; }
 .gitui-mr-lines {
   flex: 1; min-height: 0; overflow: auto;
-  font-family: ui-monospace, Consolas, monospace; font-size: 11px; line-height: 1.5;
+  font-family: ui-monospace, Consolas, monospace; font-size: calc(11px * var(--git-ui-font-scale, 1)); line-height: 1.5;
   padding: 2px 0;
 }
 .gitui-mr-line { display: flex; position: relative; min-width: 0; }
 .gitui-mr-line:hover { background: rgba(0, 0, 0, .05); }
 .gitui-mr-no {
   width: 30px; flex: none; text-align: right; padding-right: 6px;
-  color: var(--git-ui-text-dim); user-select: none; font-size: 10px;
+  color: var(--git-ui-text-dim); user-select: none; font-size: calc(10px * var(--git-ui-font-scale, 1));
 }
 .gitui-mr-text {
   flex: 1; min-width: 0; white-space: pre; overflow: hidden; text-overflow: ellipsis;
@@ -803,9 +805,9 @@ const CSS = `
 .gitui-mr-line-block-current { box-shadow: inset 3px 0 0 #1f6feb; }
 .gitui-mr-act {
   position: absolute; top: 0; z-index: 2;
-  width: 22px; height: 16px; line-height: 15px; padding: 0;
+  width: 22px; height: 16px; line-height: calc(15px * var(--git-ui-font-scale, 1)); padding: 0;
   border: none; border-radius: 4px; background: transparent;
-  cursor: pointer; font-size: 13px; font-weight: 700;
+  cursor: pointer; font-size: calc(13px * var(--git-ui-font-scale, 1)); font-weight: 700;
   visibility: hidden;
 }
 .gitui-mr-line:hover .gitui-mr-act { visibility: visible; }
@@ -824,11 +826,11 @@ const CSS = `
   flex: 1; min-height: 0; width: 100%; resize: none;
   background: transparent; color: var(--git-ui-text);
   border: none; padding: 6px 10px; outline: none;
-  font-family: ui-monospace, Consolas, monospace; font-size: 11px; line-height: 1.5;
+  font-family: ui-monospace, Consolas, monospace; font-size: calc(11px * var(--git-ui-font-scale, 1)); line-height: 1.5;
 }
 .gitui-mr-footer {
   display: flex; align-items: center; gap: 8px; padding: 6px 10px;
-  border-top: 1px solid var(--git-ui-border); font-size: 12px; flex: none;
+  border-top: 1px solid var(--git-ui-border); font-size: calc(12px * var(--git-ui-font-scale, 1)); flex: none;
 }
 
 
@@ -844,7 +846,7 @@ const CSS = `
 .gitui-remote-add { flex-wrap: wrap; padding: 6px 12px; }
 .gitui-remote-url {
   flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  color: var(--git-ui-text-dim); font-size: 11px;
+  color: var(--git-ui-text-dim); font-size: calc(11px * var(--git-ui-font-scale, 1));
 }
 .gitui-remote-url-input { flex: 1 1 160px; max-width: none; }
 /* history view (IDEA Log style) */
@@ -860,7 +862,7 @@ const CSS = `
 .gitui-log-graph {
   flex: none; color: var(--git-ui-text-dim);
   font-family: Consolas, "Cascadia Mono", "Courier New", monospace;
-  font-size: 12px; line-height: 1.4; white-space: pre;
+  font-size: calc(12px * var(--git-ui-font-scale, 1)); line-height: 1.4; white-space: pre;
   min-width: 8px;
 }
 /* One monospace column per character — vertical lines stay connected. */
@@ -875,7 +877,7 @@ const CSS = `
 }
 .gitui-log-refs {
   flex: none; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  font-size: 10px; color: var(--git-ui-accent);
+  font-size: calc(10px * var(--git-ui-font-scale, 1)); color: var(--git-ui-accent);
   border: 1px solid var(--git-ui-border); border-radius: 8px; padding: 0 5px;
 }
 .gitui-history-layout { display: flex; flex: 1; min-height: 0; overflow: hidden; }
@@ -898,40 +900,40 @@ const CSS = `
 .gitui-log-row .gitui-commit-meta { margin-top: 0; }
 .gitui-log-row:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,.12)); }
 .gitui-log-row-selected { background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,.2)); border-left-color: var(--git-ui-accent); }
-.gitui-log-row .gitui-commit-subject { font-size: 12px; }
+.gitui-log-row .gitui-commit-subject { font-size: calc(12px * var(--git-ui-font-scale, 1)); }
 .gitui-history-detail {
   flex: 1; min-width: 0;
   display: flex; flex-direction: column; min-height: 0;
 }
 .gitui-commit-detail { display: flex; flex-direction: column; flex: 1; min-height: 0; }
 .gitui-detail-body { flex: 1; overflow-y: auto; padding: 8px 12px; min-height: 0; }
-.gitui-commit-subject { font-size: 13px; font-weight: 600; line-height: 1.5; word-break: break-word; }
+.gitui-commit-subject { font-size: calc(13px * var(--git-ui-font-scale, 1)); font-weight: 600; line-height: 1.5; word-break: break-word; }
 .gitui-commit-body {
   margin: 6px 0 0; white-space: pre-wrap; word-break: break-word;
-  font-family: inherit; font-size: 12px; line-height: 1.6;
+  font-family: inherit; font-size: calc(12px * var(--git-ui-font-scale, 1)); line-height: 1.6;
   color: var(--git-ui-text-dim);
 }
-.gitui-commit-meta { margin-top: 8px; display: flex; flex-direction: column; gap: 3px; font-size: 12px; }
+.gitui-commit-meta { margin-top: 8px; display: flex; flex-direction: column; gap: 3px; font-size: calc(12px * var(--git-ui-font-scale, 1)); }
 .gitui-meta-row { display: flex; gap: 8px; align-items: baseline; }
-.gitui-meta-key { color: var(--git-ui-text-dim); width: 56px; flex: none; font-size: 11px; }
+.gitui-meta-key { color: var(--git-ui-text-dim); width: 56px; flex: none; font-size: calc(11px * var(--git-ui-font-scale, 1)); }
 .gitui-meta-hash {
-  font-family: ui-monospace, Consolas, monospace; font-size: 11px; color: var(--git-ui-accent);
+  font-family: ui-monospace, Consolas, monospace; font-size: calc(11px * var(--git-ui-font-scale, 1)); color: var(--git-ui-accent);
   background: transparent; border: none; padding: 0; cursor: pointer;
 }
 .gitui-meta-hash:hover { text-decoration: underline; }
 .gitui-meta-parents { display: flex; gap: 6px; }
 .gitui-changed-title {
   margin-top: 10px; padding-bottom: 4px; border-bottom: 1px solid var(--git-ui-border);
-  font-size: 11px; color: var(--git-ui-text-dim); text-transform: uppercase; letter-spacing: .04em;
+  font-size: calc(11px * var(--git-ui-font-scale, 1)); color: var(--git-ui-text-dim); text-transform: uppercase; letter-spacing: .04em;
 }
 .gitui-changed-files { max-height: 160px; overflow-y: auto; }
 .gitui-changed-file {
   display: flex; align-items: center; gap: 6px; padding: 3px 6px; cursor: pointer;
-  border-radius: 6px; font-size: 12px;
+  border-radius: 6px; font-size: calc(12px * var(--git-ui-font-scale, 1));
 }
 .gitui-changed-file:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,.12)); }
 .gitui-changed-file-selected { background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,.2)); }
-.gitui-numstat { margin-left: auto; flex: none; display: flex; gap: 6px; font-size: 11px; font-family: ui-monospace, Consolas, monospace; }
+.gitui-numstat { margin-left: auto; flex: none; display: flex; gap: 6px; font-size: calc(11px * var(--git-ui-font-scale, 1)); font-family: ui-monospace, Consolas, monospace; }
 .gitui-num-add { color: var(--dsw-alias-state-success-primary, #3fb950); }
 .gitui-num-del { color: var(--dsw-alias-state-error-primary, #f85149); }
 .gitui-commit-diff {
@@ -960,12 +962,12 @@ const CSS = `
   border-bottom: 1px solid var(--git-ui-border);
 }
 .gitui-commit-row:last-child { border-bottom: none; }
-.gitui-commit-hash { font-family: ui-monospace, Consolas, monospace; font-size: 11px; color: var(--git-ui-accent); width: 64px; flex: none; }
-.gitui-commit-subject { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
-.gitui-commit-meta { color: var(--git-ui-text-dim); font-size: 11px; flex: none; }
-.gitui-branch-row { display: flex; align-items: center; gap: 8px; padding: 4px 12px; font-size: 12px; }
+.gitui-commit-hash { font-family: ui-monospace, Consolas, monospace; font-size: calc(11px * var(--git-ui-font-scale, 1)); color: var(--git-ui-accent); width: 64px; flex: none; }
+.gitui-commit-subject { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: calc(12px * var(--git-ui-font-scale, 1)); }
+.gitui-commit-meta { color: var(--git-ui-text-dim); font-size: calc(11px * var(--git-ui-font-scale, 1)); flex: none; }
+.gitui-branch-row { display: flex; align-items: center; gap: 8px; padding: 4px 12px; font-size: calc(12px * var(--git-ui-font-scale, 1)); }
 .gitui-branches-scroll { overflow-y: auto; max-height: 280px; flex: none; }
-.gitui-branch-row .gitui-current-tag { color: var(--git-ui-accent); font-size: 10px; border: 1px solid var(--git-ui-accent); border-radius: 8px; padding: 0 6px; }
+.gitui-branch-row .gitui-current-tag { color: var(--git-ui-accent); font-size: calc(10px * var(--git-ui-font-scale, 1)); border: 1px solid var(--git-ui-accent); border-radius: 8px; padding: 0 6px; }
 .gitui-branch-new { display: flex; gap: 6px; padding: 6px 12px; align-items: center; }
 .gitui-compare-panel {
   border-top: 1px solid var(--git-ui-border); margin: 0 12px; padding: 4px 0;
@@ -973,11 +975,11 @@ const CSS = `
 }
 .gitui-compare-head {
   display: flex; align-items: center; gap: 8px; padding: 4px 0;
-  font-size: 12px; font-weight: 600;
+  font-size: calc(12px * var(--git-ui-font-scale, 1)); font-weight: 600;
 }
 .gitui-branch-new input {
   background: transparent; color: var(--git-ui-text);
-  border: 1px solid var(--git-ui-border); border-radius: 6px; padding: 2px 8px; font-size: 12px; outline: none;
+  border: 1px solid var(--git-ui-border); border-radius: 6px; padding: 2px 8px; font-size: calc(12px * var(--git-ui-font-scale, 1)); outline: none;
   flex: 1; max-width: 200px;
 }
 .gitui-branch-new input:focus { border-color: var(--git-ui-accent); }
@@ -999,20 +1001,20 @@ const CSS = `
 .gitui-plan-index {
   width: 18px; height: 18px; flex: none; border-radius: 9px;
   background: var(--git-ui-accent); color: #fff;
-  font-size: 11px; line-height: 18px; text-align: center; font-weight: 600;
+  font-size: calc(11px * var(--git-ui-font-scale, 1)); line-height: calc(18px * var(--git-ui-font-scale, 1)); text-align: center; font-weight: 600;
 }
 .gitui-plan-files { display: flex; gap: 4px; flex-wrap: wrap; flex: 1; min-width: 0; }
 .gitui-plan-file {
-  font-size: 11px; color: var(--git-ui-text-dim);
+  font-size: calc(11px * var(--git-ui-font-scale, 1)); color: var(--git-ui-text-dim);
   border: 1px solid var(--git-ui-border); border-radius: 4px; padding: 0 5px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px;
 }
-.gitui-plan-hash { font-family: ui-monospace, Consolas, monospace; font-size: 11px; color: var(--git-ui-accent); flex: none; }
+.gitui-plan-hash { font-family: ui-monospace, Consolas, monospace; font-size: calc(11px * var(--git-ui-font-scale, 1)); color: var(--git-ui-accent); flex: none; }
 .gitui-plan-message {
   width: 100%; min-height: 64px; resize: vertical;
   background: transparent; color: var(--git-ui-text);
   border: none; outline: none; padding: 6px 8px;
-  font-size: 12px; font-family: inherit; line-height: 1.5;
+  font-size: calc(12px * var(--git-ui-font-scale, 1)); font-family: inherit; line-height: 1.5;
 }
 .gitui-commit-plan-actions {
   display: flex; align-items: center; gap: 10px;
@@ -1029,7 +1031,7 @@ const CSS = `
   --git-ui-accent: var(--dsw-alias-brand-primary, #4d9fff);
   display: inline-flex; align-items: center; gap: 4px;
   background: transparent; border: 1px solid var(--git-ui-border); border-radius: 6px;
-  color: var(--git-ui-text); font-size: 12px; padding: 2px 8px; cursor: pointer;
+  color: var(--git-ui-text); font-size: calc(12px * var(--git-ui-font-scale, 1)); padding: 2px 8px; cursor: pointer;
   min-height: 26px;
 }
 .gitui-header-btn:hover { border-color: var(--git-ui-accent); color: var(--git-ui-accent); }
