@@ -28,6 +28,10 @@ export function RemoteView(props: {
   const [pushLocal, setPushLocal] = useState("");
   const [pushRemote, setPushRemote] = useState("");
   const [pushForce, setPushForce] = useState(false);
+  /** Remote being renamed/reconfigured (null = closed). */
+  const [editingFor, setEditingFor] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editUrl, setEditUrl] = useState("");
 
   useEffect(() => {
     let alive = true;
@@ -101,6 +105,49 @@ export function RemoteView(props: {
     }
   }
 
+  /** Toggle the add form; prefill the name with "origin" when it is free. */
+  function toggleAdding(): void {
+    if (adding) {
+      setAdding(false);
+      return;
+    }
+    setAdding(true);
+    if (remotes === null || remotes.some((remote) => remote.name === "origin")) {
+      setName("");
+    } else {
+      setName("origin");
+    }
+  }
+
+  function openEdit(remote: RemoteInfo): void {
+    setEditingFor(remote.name);
+    setEditName(remote.name);
+    setEditUrl(remote.url);
+    setError(null);
+    setOk(null);
+  }
+
+  async function saveEdit(oldName: string): Promise<void> {
+    const newName = editName.trim();
+    const newUrl = editUrl.trim();
+    if (newName === "" || newUrl === "") return;
+    setBusy(true);
+    setError(null);
+    setOk(null);
+    try {
+      if (newName !== oldName) await api.remoteRename(dir, oldName, newName);
+      await api.remoteSetUrl(dir, newName, newUrl);
+      setEditingFor(null);
+      setOk(t("remote.edited", { name: newName }));
+      onChanged();
+      await refresh();
+    } catch (caught) {
+      setError((caught as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   /** Open the push form for a remote, prefilled with the current branch. */
   function openPush(remote: string): void {
     if (pushFor === remote) {
@@ -164,7 +211,7 @@ export function RemoteView(props: {
           type="button"
           className="gitui-btn"
           disabled={busy}
-          onClick={() => setAdding(!adding)}
+          onClick={toggleAdding}
         >
           {adding ? t("action.close") : "+ " + t("remote.add")}
         </button>
@@ -235,6 +282,15 @@ export function RemoteView(props: {
                 type="button"
                 className="gitui-btn"
                 disabled={busy}
+                title={t("remote.edit")}
+                onClick={() => openEdit(remote)}
+              >
+                {t("remote.edit")}
+              </button>
+              <button
+                type="button"
+                className="gitui-btn"
+                disabled={busy}
                 onClick={() => void removeRemote(remote.name)}
               >
                 {t("remote.remove")}
@@ -275,6 +331,35 @@ export function RemoteView(props: {
                   {t("remote.push")}
                 </button>
                 <button type="button" className="gitui-btn" disabled={busy} onClick={() => setPushFor(null)}>
+                  {t("action.close")}
+                </button>
+              </div>
+            )}
+            {editingFor === remote.name && (
+              <div className="gitui-branch-new gitui-remote-add">
+                <input
+                  value={editName}
+                  placeholder={t("remote.name")}
+                  onChange={(event) => setEditName(event.target.value)}
+                />
+                <input
+                  className="gitui-remote-url-input"
+                  value={editUrl}
+                  placeholder={t("remote.url")}
+                  onChange={(event) => setEditUrl(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") void saveEdit(remote.name);
+                  }}
+                />
+                <button
+                  type="button"
+                  className="gitui-btn gitui-btn-primary"
+                  disabled={busy || editName.trim() === "" || editUrl.trim() === ""}
+                  onClick={() => void saveEdit(remote.name)}
+                >
+                  {t("remote.save")}
+                </button>
+                <button type="button" className="gitui-btn" disabled={busy} onClick={() => setEditingFor(null)}>
                   {t("action.close")}
                 </button>
               </div>

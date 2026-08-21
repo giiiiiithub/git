@@ -130,6 +130,8 @@ type Namespace = {
   remotes(request: { dir: string }): Promise<GitResult<{ remotes: RemoteInfo[] }>>;
   remoteAdd(request: { dir: string; name: string; url: string }): Promise<GitResult<{ name: string; url: string }>>;
   remoteRemove(request: { dir: string; name: string }): Promise<GitResult<{ name: string }>>;
+  remoteRename(request: { dir: string; oldName: string; newName: string }): Promise<GitResult<{ name: string }>>;
+  remoteSetUrl(request: { dir: string; name: string; url: string }): Promise<GitResult<{ name: string; url: string }>>;
   push(request: {
     dir: string;
     remote: string;
@@ -408,6 +410,14 @@ export class GitApi {
 
   async remoteRemove(dir: string, name: string): Promise<void> {
     await this.call("remoteRemove", { dir, name });
+  }
+
+  async remoteRename(dir: string, oldName: string, newName: string): Promise<void> {
+    await this.call("remoteRename", { dir, oldName, newName });
+  }
+
+  async remoteSetUrl(dir: string, name: string, url: string): Promise<void> {
+    await this.call("remoteSetUrl", { dir, name, url });
   }
 
   async push(

@@ -369,6 +369,23 @@ export function BranchesView(props: {
     }
   }
 
+  /** Fetch all configured remotes (git fetch) so remote branches refresh. */
+  async function fetchRemotes(): Promise<void> {
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+    try {
+      const outcome = await api.fetch(dir);
+      setNotice(outcome.message ?? t("fetch.done"));
+      onChanged();
+      await refresh();
+    } catch (caught) {
+      setError((caught as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   /** Remote branch row: checkout to local + pull. No destructive ops. */
   const remoteRow = (branch: BranchInfo): JSX.Element => (
     <div key={branch.name} className="gitui-branch-row">
@@ -418,6 +435,9 @@ export function BranchesView(props: {
         <span>{t("branch.remote")}</span>
         <span style={{ flex: 1 }} />
         <span className="gitui-commit-meta">{remotes.length}</span>
+        <button type="button" className="gitui-btn" disabled={busy || dir === ""} title={t("remote.fetchHint")} onClick={() => void fetchRemotes()}>
+          {t("remote.fetch")}
+        </button>
       </div>
       <div className="gitui-branches-scroll">
         {remotes.length === 0 && (

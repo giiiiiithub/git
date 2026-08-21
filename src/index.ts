@@ -1360,6 +1360,28 @@ export default class GitService extends TypertRemoteService {
     return { ok: true, value: { name: request.name } };
   }
 
+  async remoteRename(request: { dir: string; oldName: string; newName: string }): Promise<GitResult<{ name: string }>> {
+    const cwd = resolve(request.dir);
+    const run = await this.cli.run(["remote", "rename", request.oldName, request.newName], { cwd });
+    if (run.code !== 0) {
+      const stderr = run.stderr.trim();
+      if (/No such remote/i.test(stderr)) return { ok: false, error: fail("remote-not-found", "远程仓库不存在") };
+      return { ok: false, error: fail("git-error", stderr || "重命名远程仓库失败") };
+    }
+    return { ok: true, value: { name: request.newName } };
+  }
+
+  async remoteSetUrl(request: { dir: string; name: string; url: string }): Promise<GitResult<{ name: string; url: string }>> {
+    const cwd = resolve(request.dir);
+    const run = await this.cli.run(["remote", "set-url", request.name, request.url], { cwd });
+    if (run.code !== 0) {
+      const stderr = run.stderr.trim();
+      if (/No such remote/i.test(stderr)) return { ok: false, error: fail("remote-not-found", "远程仓库不存在") };
+      return { ok: false, error: fail("git-error", stderr || "更新远程仓库 URL 失败") };
+    }
+    return { ok: true, value: { name: request.name, url: request.url } };
+  }
+
   /**
    * Push the given branch to a remote. When remoteBranch differs from the
    * local branch name the refspec becomes <local>:<remote>. force uses
