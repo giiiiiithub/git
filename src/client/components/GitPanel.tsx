@@ -1781,6 +1781,7 @@ export function GitPanel(props: {
                 key={path}
                 role="option"
                 aria-selected={path === dir}
+                title={path}
                 className={
                   "gitui-dir-option" + (path === dir ? " gitui-dir-option-selected" : "")
                 }

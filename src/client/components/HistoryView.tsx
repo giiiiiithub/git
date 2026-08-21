@@ -11,7 +11,7 @@ import type { GitApi } from "../api.js";
 import type { CommitDetail, CommitInfo, DiffFile, GraphRow } from "../../types.js";
 import { DiffView, type GitUiT } from "./DiffView.js";
 import { Splitter } from "./Splitter.js";
-import { gitUiSetFullscreen } from "../store.js";
+import { SPLIT_MIN, gitUiSetFullscreen } from "../store.js";
 import { Menu, type MenuItem } from "./Menu.js";
 
 function formatDate(timestamp: number): string {
@@ -39,11 +39,11 @@ function CommitDetailPanel(props: {
   /** Maximized: the panel goes fullscreen and the detail splits keep growing. */
   diffFullscreen: boolean;
   onToggleDiffFullscreen: () => void;
-  /** Meta share of the detail height (0-100); the diff gets the rest. */
-  metaShare: number;
-  onMetaShare: (share: number) => void;
+  /** Changed-file pane width in px (user-draggable). */
+  filesWidth: number;
+  onFilesWidth: (width: number) => void;
 }): JSX.Element {
-  const { api, dir, hash, t, onChanged, diffFullscreen, onToggleDiffFullscreen, metaShare, onMetaShare } = props;
+  const { api, dir, hash, t, onChanged, diffFullscreen, onToggleDiffFullscreen, filesWidth, onFilesWidth } = props;
   const [detail, setDetail] = useState<CommitDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [filePath, setFilePath] = useState<string | null>(null);
@@ -56,6 +56,8 @@ function CommitDetailPanel(props: {
   const [worktreeMode, setWorktreeMode] = useState(false);
   /** Files of the worktree diff (all paths when worktreeMode). */
   const [worktreeFiles, setWorktreeFiles] = useState<Array<{ path: string }>>([]);
+  /** Expand the commit body + full metadata (compact by default: bigger diff). */
+  const [showInfo, setShowInfo] = useState(false);
 
   async function runAction(kind: "cherry-pick" | "revert" | "tag"): Promise<void> {
     setActionBusy(true);
@@ -190,18 +192,20 @@ function CommitDetailPanel(props: {
     }
   }
 
-  /** Detail container, measured for the vertical drag (meta vs diff height). */
+  /** Detail container, measured for the changed-pane width drag. */
   const detailRef = useRef<HTMLDivElement>(null);
-  /** Drag the horizontal divider between the commit info and the diff. */
-  const startVSplit = (event: React.MouseEvent): void => {
+  /** Drag the divider between the changed-files pane and the diff. */
+  const startHSplit = (event: React.MouseEvent): void => {
     event.preventDefault();
     const container = detailRef.current;
-    const startY = event.clientY;
-    const startShare = metaShare;
+    const startX = event.clientX;
+    const startWidth = filesWidth;
     const onMove = (move: MouseEvent): void => {
-      const height = container?.getBoundingClientRect().height ?? 400;
-      const delta = ((move.clientY - startY) / height) * 100;
-      onMetaShare(Math.min(80, Math.max(0, Math.round(startShare + delta))));
+      const width = container?.getBoundingClientRect().width ?? 800;
+      // Keep the diff readable: the pane never passes (width - 260px), and never under SPLIT_MIN.
+      const max = Math.max(SPLIT_MIN, width - 260);
+      const next = Math.min(max, Math.max(SPLIT_MIN, startWidth + move.clientX - startX));
+      onFilesWidth(Math.round(next));
     };
     const onUp = (): void => {
       window.removeEventListener("mousemove", onMove);
@@ -213,6 +217,8 @@ function CommitDetailPanel(props: {
     window.addEventListener("mouseup", onUp);
   };
 
+
+
   if (error !== null) {
     return <div className="gitui-error" style={{ padding: 12 }}>{error}</div>;
   }
@@ -222,6 +228,33 @@ function CommitDetailPanel(props: {
 
   const fileList = worktreeMode ? worktreeFiles : detail.files.map((f) => ({ path: f.path, status: f.status }));
 
+  /** The diff pane shared by the inline row and the fullscreen mode. */
+  const diffPane = (
+    <div className="gitui-commit-diff" style={{ flex: 1, minWidth: 0, minHeight: 0 }}>
+      <div className="gitui-detail-header">
+        <span className="gitui-file-path">{filePath ?? ""}</span>
+        <span style={{ flex: 1 }} />
+        <button
+          type="button"
+          className={"gitui-btn" + (diffFullscreen ? " gitui-active" : "")}
+          title={diffFullscreen ? t("win.exitFullscreen") : t("win.fullscreen")}
+          onClick={onToggleDiffFullscreen}
+        >
+          {diffFullscreen ? "🗗" : "⛶"}
+        </button>
+      </div>
+      {diffLoading ? (
+        <div className="gitui-diff-placeholder">…</div>
+      ) : (
+        <DiffView
+          file={diffFiles !== null && diffFiles.length > 0 ? diffFiles[0] : null}
+          t={t}
+          leftLabel={worktreeMode ? detail.short : detail.parents.length > 0 ? detail.parents[0].slice(0, 7) : t("diff.emptyTree")}
+          rightLabel={worktreeMode ? t("diff.worktree") : detail.short}
+        />
+      )}
+    </div>
+  );
 
   return (
     <div className="gitui-commit-detail" ref={detailRef}>
@@ -246,95 +279,86 @@ function CommitDetailPanel(props: {
         </button>
         {actionResult !== null && <span className="gitui-ok" style={{ padding: 0 }}>{actionResult}</span>}
       </div>
-      {!diffFullscreen && metaShare > 0 && (
-      <div className="gitui-detail-body" style={{ flexGrow: metaShare, flexBasis: 0 }}>
+      {!diffFullscreen && (
+      <div className="gitui-detail-summary">
         <div className="gitui-commit-subject">{detail.subject}</div>
-        {detail.body !== "" && <pre className="gitui-commit-body">{detail.body}</pre>}
-        <div className="gitui-commit-meta">
-          <div className="gitui-meta-row">
-            <span className="gitui-meta-key">{t("log.hash")}</span>
-            <button type="button" className="gitui-meta-hash" onClick={() => void copyHash()} title={detail.hash}>
-              {detail.short}
-              {copied ? ` ✓` : ""}
-            </button>
-          </div>
-          <div className="gitui-meta-row">
-            <span className="gitui-meta-key">{t("log.author")}</span>
-            <span>{detail.author}{detail.authorEmail !== "" ? ` <${detail.authorEmail}>` : ""}</span>
-          </div>
-          <div className="gitui-meta-row">
-            <span className="gitui-meta-key">{t("log.date")}</span>
-            <span>{formatDate(detail.authorDate)}</span>
-          </div>
-          {detail.parents.length > 0 && (
-            <div className="gitui-meta-row">
-              <span className="gitui-meta-key">{t("log.parents")}</span>
-              <span className="gitui-meta-parents">
-                {detail.parents.map((parent) => (
-                  <span key={parent} className="gitui-meta-hash">{parent.slice(0, 7)}</span>
-                ))}
-              </span>
-            </div>
-          )}
+        <div className="gitui-commit-oneliner">
+          <button type="button" className="gitui-meta-hash" onClick={() => void copyHash()} title={detail.hash}>
+            {detail.short}
+            {copied ? ` ✓` : ""}
+          </button>
+          <span>· {detail.author}{detail.authorEmail !== "" ? ` <${detail.authorEmail}>` : ""}</span>
+          <span>· {formatDate(detail.authorDate)}</span>
+          <span style={{ flex: 1 }} />
+          <button type="button" className="gitui-btn" onClick={() => setShowInfo((current) => !current)}>
+            {showInfo ? "▾" : "▸"} {showInfo ? t("history.hideInfo") : t("history.showInfo")}
+          </button>
         </div>
-        <div className="gitui-changed-title">
-          {worktreeMode ? t("log.worktreeFiles") : t("log.changedFiles")} ({fileList.length})
-        </div>
-        <div className="gitui-changed-files">
-          {fileList.slice(0, fileLimit).map((file) => (
-            <div
-              key={file.path}
-              className={"gitui-changed-file" + (file.path === filePath ? " gitui-changed-file-selected" : "")}
-              onClick={() => openFile(file.path)}
-            >
-              {!worktreeMode && (
-                <span className={"gitui-file-status " + ((file as { status?: string }).status === "D" ? "gitui-st-deleted" : (file as { status?: string }).status === "A" ? "gitui-st-added" : (file as { status?: string }).status === "M" ? "gitui-st-modified" : "")}>
-                  {STATUS_LABEL[(file as { status?: string }).status ?? ""] ?? (file as { status?: string }).status ?? ""}
-                </span>
+        {showInfo && (
+          <>
+            {detail.body !== "" && <pre className="gitui-commit-body">{detail.body}</pre>}
+            <div className="gitui-commit-meta">
+              <div className="gitui-meta-row">
+                <span className="gitui-meta-key">{t("log.author")}</span>
+                <span>{detail.author}{detail.authorEmail !== "" ? ` <${detail.authorEmail}>` : ""}</span>
+              </div>
+              <div className="gitui-meta-row">
+                <span className="gitui-meta-key">{t("log.date")}</span>
+                <span>{formatDate(detail.authorDate)}</span>
+              </div>
+              {detail.parents.length > 0 && (
+                <div className="gitui-meta-row">
+                  <span className="gitui-meta-key">{t("log.parents")}</span>
+                  <span className="gitui-meta-parents">
+                    {detail.parents.map((parent) => (
+                      <span key={parent} className="gitui-meta-hash">{parent.slice(0, 7)}</span>
+                    ))}
+                  </span>
+                </div>
               )}
-              <span className="gitui-file-path">{file.path}</span>
             </div>
-          ))}
-          {fileList.length > fileLimit && (
-            <button
-              type="button"
-              className="gitui-btn"
-              style={{ margin: "6px 8px", width: "calc(100% - 16px)" }}
-              onClick={() => setFileLimit((current) => current + FILE_PAGE)}
-            >
-              {t("log.showMore", { n: String(fileList.length - fileLimit) })}
-            </button>
-          )}
-        </div>
+          </>
+        )}
       </div>
       )}
       {!diffFullscreen && (
-      <div className="gitui-vsplit" title={t("history.vsplit")} onMouseDown={startVSplit} />
-      )}
-      {diffLoading ? (
-        <div className="gitui-diff-placeholder">…</div>
-      ) : (
-        <div className="gitui-commit-diff" style={diffFullscreen ? { flex: 1, minHeight: 0 } : { flexGrow: 100 - metaShare, flexBasis: 0 }}>
-          <div className="gitui-detail-header">
-            <span className="gitui-file-path">{filePath ?? ""}</span>
-            <span style={{ flex: 1 }} />
-            <button
-              type="button"
-              className={"gitui-btn" + (diffFullscreen ? " gitui-active" : "")}
-              title={diffFullscreen ? t("win.exitFullscreen") : t("win.fullscreen")}
-              onClick={onToggleDiffFullscreen}
-            >
-              {diffFullscreen ? "🗗" : "⛶"}
-            </button>
+      <div className="gitui-detail-row">
+        <div className="gitui-changed-pane" style={{ width: filesWidth, flex: "none" }}>
+          <div className="gitui-changed-title">
+            {worktreeMode ? t("log.worktreeFiles") : t("log.changedFiles")} ({fileList.length})
           </div>
-          <DiffView
-            file={diffFiles !== null && diffFiles.length > 0 ? diffFiles[0] : null}
-            t={t}
-            leftLabel={worktreeMode ? detail.short : detail.parents.length > 0 ? detail.parents[0].slice(0, 7) : t("diff.emptyTree")}
-            rightLabel={worktreeMode ? t("diff.worktree") : detail.short}
-          />
+          <div className="gitui-changed-files">
+            {fileList.slice(0, fileLimit).map((file) => (
+              <div
+                key={file.path}
+                className={"gitui-changed-file" + (file.path === filePath ? " gitui-changed-file-selected" : "")}
+                onClick={() => openFile(file.path)}
+              >
+                {!worktreeMode && (
+                  <span className={"gitui-file-status " + ((file as { status?: string }).status === "D" ? "gitui-st-deleted" : (file as { status?: string }).status === "A" ? "gitui-st-added" : (file as { status?: string }).status === "M" ? "gitui-st-modified" : "")}>
+                    {STATUS_LABEL[(file as { status?: string }).status ?? ""] ?? (file as { status?: string }).status ?? ""}
+                  </span>
+                )}
+                <span className="gitui-file-path">{file.path}</span>
+              </div>
+            ))}
+            {fileList.length > fileLimit && (
+              <button
+                type="button"
+                className="gitui-btn"
+                style={{ margin: "6px 8px", width: "calc(100% - 16px)" }}
+                onClick={() => setFileLimit((current) => current + FILE_PAGE)}
+              >
+                {t("log.showMore", { n: String(fileList.length - fileLimit) })}
+              </button>
+            )}
+          </div>
         </div>
+        <div className="gitui-hsplit" title={t("history.filePaneResize")} onMouseDown={startHSplit} />
+        {diffPane}
+      </div>
       )}
+      {diffFullscreen && diffPane}
     </div>
   );
 }
@@ -366,8 +390,8 @@ export function HistoryView(props: {
   const [filePathInput, setFilePathInput] = useState("");
   /** Maximized: the panel goes fullscreen; the left list stays visible. */
   const [diffFullscreen, setDiffFullscreen] = useState(false);
-  /** Commit-info share of the detail height (0-100); the diff gets the rest. */
-  const [metaShare, setMetaShare] = useState(55);
+  /** Changed-file pane width in px (user-draggable). */
+  const [filesWidth, setFilesWidth] = useState(240);
 
   // Entering diff-only mode also puts the whole panel in fullscreen; exiting
   // through the panel titlebar (⛶) must leave the diff-only mode too.
@@ -551,7 +575,6 @@ export function HistoryView(props: {
         style={{ width: splitWidth, minWidth: 0, maxWidth: "none" }}
       >
         <div className="gitui-detail-header">
-          <span>{t("tabs.history")}</span>
           <span style={{ flex: 1 }} />
           <button
             type="button"
@@ -719,8 +742,8 @@ export function HistoryView(props: {
             onChanged={onChanged}
             diffFullscreen={diffFullscreen}
             onToggleDiffFullscreen={toggleDiffFullscreen}
-            metaShare={metaShare}
-            onMetaShare={setMetaShare}
+            filesWidth={filesWidth}
+            onFilesWidth={setFilesWidth}
           />
         )}
       </div>

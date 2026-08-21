@@ -146,7 +146,8 @@ const CSS = `
 .gitui-dir-menu {
   position: absolute;
   top: calc(100% + 4px);
-  left: 0; right: 0;
+  left: 0; right: auto;
+  width: max-content; min-width: 100%; max-width: min(72vw, 640px);
   background: var(--dsw-alias-bg-layer-1, #1e1e1e);
   border: 1px solid var(--git-ui-border);
   border-radius: 8px;
@@ -906,7 +907,16 @@ const CSS = `
   display: flex; flex-direction: column; min-height: 0;
 }
 .gitui-commit-detail { display: flex; flex-direction: column; flex: 1; min-height: 0; }
-.gitui-detail-body { flex: 1; overflow-y: auto; padding: 8px 12px; min-height: 0; }
+.gitui-detail-summary { flex: none; padding: 8px 12px; border-bottom: 1px solid var(--git-ui-border); }
+.gitui-commit-oneliner {
+  display: flex; align-items: center; gap: 6px; margin-top: 4px;
+  font-size: calc(12px * var(--git-ui-font-scale, 1)); color: var(--git-ui-text-dim);
+}
+.gitui-detail-row { display: flex; flex: 1; min-height: 0; min-width: 0; }
+.gitui-changed-pane {
+  display: flex; flex-direction: column; flex: none; min-width: 0; min-height: 0;
+  border-right: 1px solid var(--git-ui-border); max-width: 62%;
+}
 .gitui-commit-subject { font-size: calc(13px * var(--git-ui-font-scale, 1)); font-weight: 600; line-height: 1.5; word-break: break-word; }
 .gitui-commit-body {
   margin: 6px 0 0; white-space: pre-wrap; word-break: break-word;
@@ -926,7 +936,7 @@ const CSS = `
   margin-top: 10px; padding-bottom: 4px; border-bottom: 1px solid var(--git-ui-border);
   font-size: calc(11px * var(--git-ui-font-scale, 1)); color: var(--git-ui-text-dim); text-transform: uppercase; letter-spacing: .04em;
 }
-.gitui-changed-files { max-height: 160px; overflow-y: auto; }
+.gitui-changed-files { flex: 1; overflow-y: auto; min-height: 0; }
 .gitui-changed-file {
   display: flex; align-items: center; gap: 6px; padding: 3px 6px; cursor: pointer;
   border-radius: 6px; font-size: calc(12px * var(--git-ui-font-scale, 1));
@@ -937,9 +947,8 @@ const CSS = `
 .gitui-num-add { color: var(--dsw-alias-state-success-primary, #3fb950); }
 .gitui-num-del { color: var(--dsw-alias-state-error-primary, #f85149); }
 .gitui-commit-diff {
-  flex: 1; min-height: 120px;
-  display: flex; flex-direction: column; min-height: 0;
-  border-top: 1px solid var(--git-ui-border);
+  flex: 1; min-width: 0; min-height: 0;
+  display: flex; flex-direction: column;
 }
 .gitui-commit-diff .gitui-detail-header { flex: none; }
 
@@ -955,6 +964,20 @@ const CSS = `
 .gitui-vsplit:hover::before,
 .gitui-vsplit:active::before {
   background: var(--git-ui-accent); height: 2px; top: 2.5px;
+}
+
+/* Vertical divider between the changed-files pane and the diff (draggable). */
+.gitui-hsplit {
+  flex: none; width: 7px; cursor: col-resize; touch-action: none;
+  background: transparent; position: relative;
+}
+.gitui-hsplit::before {
+  content: ""; position: absolute; top: 0; bottom: 0; left: 3px; width: 1px;
+  background: var(--git-ui-border); transition: background .12s, width .12s, left .12s;
+}
+.gitui-hsplit:hover::before,
+.gitui-hsplit:active::before {
+  background: var(--git-ui-accent); width: 2px; left: 2.5px;
 }
 
 .gitui-commit-row {
