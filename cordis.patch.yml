@@ -1,0 +1,14 @@
+# dsh-git-ui bundle patch.
+#
+# One row hosts both halves of the plugin: the node half provides the `git`
+# Typert Remote service that shells out to the local git executable, and the
+# package's `dsh.client` declaration adds the browser half to the web roster
+# (served at /plugins/dsh-git-ui/client.js).
+#
+# `dsh plugin --profile <name> add dsh-git-ui` reconciles this bundle into
+# the profile's layer stack automatically; no manual cordis.patch.yml edit is
+# needed.
+
+- insert:
+    - id: git-ui
+      name: dsh-git-ui

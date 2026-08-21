@@ -1,0 +1,80 @@
+{
+  "name": "dsh-git-ui",
+  "description": "IDEA-style Git panel for the DSH Web UI: changes, line-level diff, staging, commit, branches, log, and merge conflict resolution. Host half runs git locally; client half is a browser plugin.",
+  "version": "0.1.0",
+  "license": "MIT",
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "deepseek harness",
+    "plugin",
+    "git",
+    "vcs",
+    "ide",
+    "web ui"
+  ],
+  "author": "giiiiiithub",
+  "homepage": "https://github.com/giiiiiithub/git-ui#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/giiiiiithub/git-ui.git"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "type": "module",
+  "main": "lib/index.mjs",
+  "exports": {
+    ".": {
+      "default": "./lib/index.mjs"
+    },
+    "./typert": {
+      "default": "./lib/typert.mjs"
+    },
+    "./remote": {
+      "default": "./lib/remote.mjs"
+    },
+    "./client": {
+      "default": "./lib/client.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "cordis.patch.yml"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-connection",
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-api-remotes",
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-slots",
+        "@deepseek-ai/dsh-client-ui-conversation"
+      ],
+      "platform": "web",
+      "immediately": true
+    }
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.1",
+    "@deepseek-ai/dsh-typert-protocol": "^0.1.0-rc.6"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/react": "~18.3.1",
+    "react": "^18.2.0",
+    "tsdown": "^0.22.14",
+    "typescript": "^5.9.0",
+    "zod": "^4.4.3"
+  },
+  "scripts": {
+    "bundle": "tsc --noEmit && tsdown && node scripts/wrap-client.mjs",
+    "watch": "tsdown --watch",
+    "prepublishOnly": "npm run bundle"
+  }
+}
