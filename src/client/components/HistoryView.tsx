@@ -42,16 +42,16 @@ function CommitDetailPanel(props: {
   /** Changed-file pane width in px (user-draggable). */
   filesWidth: number;
   onFilesWidth: (width: number) => void;
+  /** Exposes the worktree-compare toggle to the History context menu. */
+  worktreeToggleRef?: React.MutableRefObject<(() => void) | undefined>;
 }): JSX.Element {
-  const { api, dir, hash, t, onChanged, diffFullscreen, onToggleDiffFullscreen, filesWidth, onFilesWidth } = props;
+  const { api, dir, hash, t, onChanged, diffFullscreen, onToggleDiffFullscreen, filesWidth, onFilesWidth, worktreeToggleRef } = props;
   const [detail, setDetail] = useState<CommitDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [filePath, setFilePath] = useState<string | null>(null);
   const [diffFiles, setDiffFiles] = useState<DiffFile[] | null>(null);
   const [diffLoading, setDiffLoading] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [actionBusy, setActionBusy] = useState(false);
-  const [actionResult, setActionResult] = useState<string | null>(null);
   /** Compare mode: show the diff between this commit and the working tree. */
   const [worktreeMode, setWorktreeMode] = useState(false);
   /** Files of the worktree diff (all paths when worktreeMode). */
@@ -59,32 +59,6 @@ function CommitDetailPanel(props: {
   /** Expand the commit body + full metadata (compact by default: bigger diff). */
   const [showInfo, setShowInfo] = useState(false);
 
-  async function runAction(kind: "cherry-pick" | "revert" | "tag"): Promise<void> {
-    setActionBusy(true);
-    setError(null);
-    setActionResult(null);
-    try {
-      if (kind === "tag") {
-        const name = window.prompt(t("tag.createPrompt"), "");
-        if (name === null || name.trim() === "") return;
-        await api.tagCreate(dir, name.trim(), hash);
-        setActionResult(t("tag.created", { name: name.trim() }));
-      } else if (kind === "cherry-pick") {
-        const outcome = await api.cherryPick(dir, hash);
-        if (outcome.done) setActionResult(t("cherryPicked"));
-        else setError(t("cherryPick.conflicts", { n: outcome.conflicts?.length ?? 0 }));
-      } else {
-        const outcome = await api.revert(dir, hash);
-        if (outcome.done) setActionResult(t("reverted"));
-        else setError(t("revert.conflicts", { n: outcome.conflicts?.length ?? 0 }));
-      }
-      onChanged();
-    } catch (caught) {
-      setError((caught as Error).message);
-    } finally {
-      setActionBusy(false);
-    }
-  }
   const [fileLimit, setFileLimit] = useState(200);
   const FILE_PAGE = 200;
 
@@ -182,6 +156,18 @@ function CommitDetailPanel(props: {
     }
   }
 
+  // Let the History context menu trigger the worktree-compare mode for the
+  // selected commit (the diff pane owns the toggle logic and state).
+  useEffect(() => {
+    if (worktreeToggleRef !== undefined) {
+      worktreeToggleRef.current = toggleWorktreeMode;
+      return () => {
+        worktreeToggleRef.current = undefined;
+      };
+    }
+    return;
+  });
+
   async function copyHash(): Promise<void> {
     try {
       await navigator.clipboard.writeText(detail?.hash ?? "");
@@ -258,27 +244,6 @@ function CommitDetailPanel(props: {
 
   return (
     <div className="gitui-commit-detail" ref={detailRef}>
-      <div className="gitui-commit-actions">
-        <button type="button" className="gitui-btn" disabled={actionBusy} title={t("cherryPick.hint")} onClick={() => void runAction("cherry-pick")}>
-          🍒 {t("cherryPick")}
-        </button>
-        <button type="button" className="gitui-btn" disabled={actionBusy} title={t("revert.hint")} onClick={() => void runAction("revert")}>
-          ↩ {t("revert")}
-        </button>
-        <button type="button" className="gitui-btn" disabled={actionBusy} title={t("tag.hint")} onClick={() => void runAction("tag")}>
-          🏷 {t("tag.create")}
-        </button>
-        <button
-          type="button"
-          className={"gitui-btn" + (worktreeMode ? " gitui-active" : "")}
-          disabled={actionBusy}
-          title={t("log.worktreeDiff")}
-          onClick={toggleWorktreeMode}
-        >
-          ⇄ {t("log.worktreeDiff")}
-        </button>
-        {actionResult !== null && <span className="gitui-ok" style={{ padding: 0 }}>{actionResult}</span>}
-      </div>
       {!diffFullscreen && (
       <div className="gitui-detail-summary">
         <div className="gitui-commit-subject">{detail.subject}</div>
@@ -382,6 +347,8 @@ export function HistoryView(props: {
   const { api, dir, t, onChanged, splitWidth, onSplitWidth, onSplitReset, fileFilterInit, onFileFilterConsumed, fullscreen } = props;
   const [rows, setRows] = useState<GraphRow[] | null>(null);
   const [selectedHash, setSelectedHash] = useState<string | null>(null);
+  /** Handle CommitDetailPanel's worktree-compare toggle for the context menu. */
+  const detailWorktreeRef = useRef<(() => void) | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
   /** Search filter over subject / author / hash. */
   const [query, setQuery] = useState("");
@@ -559,6 +526,11 @@ export function HistoryView(props: {
             void api.tagCreate(dir, name.trim(), hash).catch((caught) => setError((caught as Error).message));
           }
         }
+      },
+      {
+        label: t("log.worktreeDiff"),
+        disabled: hash !== selectedHash,
+        onClick: () => detailWorktreeRef.current?.()
       }
     ];
   }
@@ -569,16 +541,12 @@ export function HistoryView(props: {
   const remoteBranchOptions = branches.filter((b) => b.startsWith("remotes/"));
 
   return (
-    <div className="gitui-history-layout">
-      <div
-        className="gitui-history-side"
-        style={{ width: splitWidth, minWidth: 0, maxWidth: "none" }}
-      >
-        <div className="gitui-detail-header">
-          <span style={{ flex: 1 }} />
+    <div className="gitui-history">
+      <div className="gitui-history-tools">
           <button
             type="button"
             className="gitui-btn"
+            title={t("action.refresh")}
             onClick={() => {
               setRows(null);
               void (async () => {
@@ -601,8 +569,6 @@ export function HistoryView(props: {
           >
             {t("action.refresh")}
           </button>
-        </div>
-        <div className="gitui-history-tools">
           <input
             className="gitui-dir"
             value={query}
@@ -673,7 +639,12 @@ export function HistoryView(props: {
             </button>
           )}
         </div>
-        <div className="gitui-history-list">
+        <div className="gitui-history-layout">
+          <div
+            className="gitui-history-side"
+            style={{ width: splitWidth, minWidth: 0, maxWidth: "none" }}
+          >
+            <div className="gitui-history-list">
           {rows === null && <div className="gitui-diff-placeholder">…</div>}
           {rows !== null && rows.length === 0 && (
             <div className="gitui-diff-placeholder">{t("history.empty")}</div>
@@ -744,12 +715,14 @@ export function HistoryView(props: {
             onToggleDiffFullscreen={toggleDiffFullscreen}
             filesWidth={filesWidth}
             onFilesWidth={setFilesWidth}
+            worktreeToggleRef={detailWorktreeRef}
           />
         )}
       </div>
       {menu !== null && (
         <Menu x={menu.x} y={menu.y} items={commitMenuItems(menu.hash)} onClose={() => setMenu(null)} />
       )}
+    </div>
     </div>
   );
 }

@@ -851,15 +851,12 @@ const CSS = `
 }
 .gitui-remote-url-input { flex: 1 1 160px; max-width: none; }
 /* history view (IDEA Log style) */
-.gitui-commit-actions {
-  display: flex; align-items: center; gap: 6px; padding: 6px 10px;
-  border-bottom: 1px solid var(--git-ui-border); flex-wrap: wrap; flex: none;
-}
 .gitui-history-tools {
-  display: flex; gap: 6px; padding: 6px 10px 2px;
+  display: flex; flex-direction: row; align-items: center; gap: 6px; padding: 6px 10px 2px;
   border-bottom: 1px solid var(--git-ui-border); flex: none;
 }
-.gitui-history-tools .gitui-dir { flex: 1 1 40%; }
+.gitui-history-tools .gitui-btn { flex: none; }
+.gitui-history-tools .gitui-dir { flex: 1 1 0; min-width: 0; }
 .gitui-log-graph {
   flex: none; color: var(--git-ui-text-dim);
   font-family: Consolas, "Cascadia Mono", "Courier New", monospace;
@@ -881,6 +878,8 @@ const CSS = `
   font-size: calc(10px * var(--git-ui-font-scale, 1)); color: var(--git-ui-accent);
   border: 1px solid var(--git-ui-border); border-radius: 8px; padding: 0 5px;
 }
+/* Full-width History toolbar sits above the log/detail split. */
+.gitui-history { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
 .gitui-history-layout { display: flex; flex: 1; min-height: 0; overflow: hidden; }
 .gitui-history-side {
   width: 44%; min-width: 220px; max-width: 380px;
