@@ -997,7 +997,10 @@ export const pushPreviewResultSchema = resultSchema(
 
 // ── interactive rebase ───────────────────────────────────────────────────────
 
-export const rebaseListRequestSchema = dirRequestSchema;
+export const rebaseListRequestSchema = dirRequestSchema.extend({
+  /** Explicit rebase base (e.g. "rebase X onto <base>"); auto-detected when omitted. */
+  base: z.string().optional()
+});
 
 export const rebaseListResultSchema = resultSchema(
   z.object({

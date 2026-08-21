@@ -2206,12 +2206,13 @@ export default class GitService extends TypertRemoteService {
   }
 
   /** The commits a rebase would rewrite, plus a sensible default base. */
-  async rebaseList(request: { dir: string }): Promise<GitResult<{ base: string; commits: CommitInfo[] }>> {
+  async rebaseList(request: { dir: string; base?: string }): Promise<GitResult<{ base: string; commits: CommitInfo[] }>> {
     const cwd = resolve(request.dir);
-    let base: string | null = null;
+    const hint = request.base?.trim() ?? "";
+    let base: string | null = hint !== "" ? hint : null;
     const branchRun = await this.cli.run(["symbolic-ref", "--short", "HEAD"], { cwd });
     const branch = branchRun.code === 0 ? branchRun.stdout.trim() : "";
-    if (branch !== "") {
+    if (base === null && branch !== "") {
       const upstreamRun = await this.cli.run(["rev-parse", "--abbrev-ref", branch + "@{upstream}"], { cwd });
       if (upstreamRun.code === 0 && upstreamRun.stdout.trim() !== "") {
         base = upstreamRun.stdout.trim();

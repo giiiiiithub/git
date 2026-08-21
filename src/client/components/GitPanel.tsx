@@ -1554,6 +1554,11 @@ export function GitPanel(props: {
             fileFilterInit={historyFileFilter}
             onFileFilterConsumed={() => setHistoryFileFilter(null)}
             fullscreen={fullscreen}
+            currentBranch={status?.branch ?? null}
+            onOpenRebase={(base) => {
+              setRebaseBaseHint(base ?? "");
+              setRebaseOpen(true);
+            }}
           />
         ) : tab === "branches" ? (
           <BranchesView

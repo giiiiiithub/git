@@ -163,7 +163,7 @@ export const TYPERT = {
           { name: "GitIgnoreAddResult", declaration: "export type GitIgnoreAddResult = GitResult<{ path: string; target: string }>;" },
           { name: "GitPushPreviewRequest", declaration: "export interface GitPushPreviewRequest { readonly dir: string; readonly remote: string; readonly branch: string; }" },
           { name: "GitPushPreviewResult", declaration: "export type GitPushPreviewResult = GitResult<{ upstream: string | null; ahead: CommitInfo[] }>;" },
-          { name: "GitRebaseListRequest", declaration: "export interface GitRebaseListRequest { readonly dir: string; }" },
+          { name: "GitRebaseListRequest", declaration: "export interface GitRebaseListRequest { readonly dir: string; readonly base?: string; }" },
           { name: "GitRebaseListResult", declaration: "export type GitRebaseListResult = GitResult<{ base: string; commits: CommitInfo[] }>;" },
           { name: "GitRebaseStartRequest", declaration: "export interface GitRebaseStartRequest { readonly dir: string; readonly base: string; readonly items: RebaseItem[]; }" },
           { name: "GitRebaseStartResult", declaration: "export type GitRebaseStartResult = GitResult<{ started: boolean; conflicts?: string[]; message?: string }>;" },

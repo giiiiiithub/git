@@ -622,8 +622,8 @@ export class GitApi {
     return this.call("pushPreview", { dir, remote, branch });
   }
 
-  async rebaseList(dir: string): Promise<{ base: string; commits: CommitInfo[] }> {
-    return this.call("rebaseList", { dir });
+  async rebaseList(dir: string, base?: string): Promise<{ base: string; commits: CommitInfo[] }> {
+    return this.call("rebaseList", { dir, ...(base !== undefined && base !== "" ? { base } : {}) });
   }
 
   async rebaseStart(dir: string, base: string, items: RebaseItem[]): Promise<{ started: boolean; conflicts?: string[]; message?: string }> {

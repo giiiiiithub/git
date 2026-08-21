@@ -322,8 +322,12 @@ export function HistoryView(props: {
   onFileFilterConsumed?: () => void;
   /** Panel-level fullscreen flag (used to sync the diff-only mode). */
   fullscreen: boolean;
+  /** Current branch shown in the panel title bar — the merge/rebase target. */
+  currentBranch?: string | null;
+  /** Open the interactive rebase dialog (fallback when the host lacks base support). */
+  onOpenRebase?: (base?: string) => void;
 }): JSX.Element {
-  const { api, dir, t, onChanged, splitWidth, onSplitWidth, onSplitReset, fileFilterInit, onFileFilterConsumed, fullscreen } = props;
+  const { api, dir, t, onChanged, splitWidth, onSplitWidth, onSplitReset, fileFilterInit, onFileFilterConsumed, fullscreen, currentBranch, onOpenRebase } = props;
   const [rows, setRows] = useState<GraphRow[] | null>(null);
   const [selectedHash, setSelectedHash] = useState<string | null>(null);
   /** Handle CommitDetailPanel's worktree-compare toggle for the context menu. */
@@ -355,6 +359,12 @@ export function HistoryView(props: {
   const [diffFullscreen, setDiffFullscreen] = useState(false);
   /** Changed-file pane width in px (user-draggable). */
   const [filesWidth, setFilesWidth] = useState(240);
+  /** Busy while a "更多" merge/rebase runs. */
+  const [busy, setBusy] = useState(false);
+  /** Success/conflict feedback for the "更多" operations. */
+  const [notice, setNotice] = useState<string | null>(null);
+  /** "更多" dropdown menu anchor. */
+  const [moreMenu, setMoreMenu] = useState<{ x: number; y: number } | null>(null);
 
   // Entering diff-only mode also puts the whole panel in fullscreen; exiting
   // through the panel titlebar (⛶) must leave the diff-only mode too.
@@ -544,6 +554,90 @@ export function HistoryView(props: {
     ];
   }
 
+  /** Reload the commit list with the current filters. */
+  async function refreshRows(): Promise<void> {
+    try {
+      const filters = {
+        ...(branchFilter !== "" ? { branch: branchFilter } : {}),
+        ...(authorFilter !== "" ? { author: authorFilter } : {}),
+        ...(sinceFilter !== "" ? { since: sinceFilter } : {}),
+        ...(untilFilter !== "" ? { until: untilFilter } : {})
+      };
+      const graphRows = filePathFilter !== null
+        ? await api.fileLog(dir, filePathFilter, 50).then((cs: CommitInfo[]) => cs.map((c) => ({ graph: [] as GraphRow["graph"], ...c })))
+        : await api.logGraph(dir, 100, filters);
+      setRows(graphRows);
+    } catch (caught) {
+      setError((caught as Error).message);
+    }
+  }
+
+  /** Merge the branch selected in the branch filter into the current branch. */
+  async function mergeToCurrentBranch(): Promise<void> {
+    if (dir === "" || currentBranch === null || currentBranch === undefined) return;
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+    try {
+      const outcome = await api.merge(dir, branchFilter);
+      if (outcome.kind === "conflicts") {
+        setNotice(t("merge.conflicts", { n: outcome.conflicts?.length ?? 0 }));
+      } else if (outcome.kind === "error") {
+        setError(outcome.message ?? "merge failed");
+      } else {
+        setNotice(t("history.merged", { from: branchFilter, to: currentBranch }));
+      }
+      await refreshRows();
+      onChanged();
+    } catch (caught) {
+      setError((caught as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /** Check out the filtered branch and rebase it onto the current branch. */
+  async function rebaseToCurrentBranch(): Promise<void> {
+    if (dir === "" || currentBranch === null || currentBranch === undefined) return;
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+    try {
+      await api.checkout(dir, branchFilter);
+      onChanged();
+      // The host honors the explicit base only after the matching update is
+      // loaded; otherwise (old host) fall back to the interactive dialog so no
+      // rebase runs against a mismatched commit list.
+      let list: { base: string; commits: CommitInfo[] } | null = null;
+      try {
+        list = await api.rebaseList(dir, currentBranch);
+      } catch {
+        list = null;
+      }
+      if (list === null || list.base !== currentBranch) {
+        onOpenRebase?.(currentBranch);
+        return;
+      }
+      if (list.commits.length === 0) {
+        setNotice(t("rebase.nothing"));
+        return;
+      }
+      const items = list.commits.map((c) => ({ action: "pick" as const, hash: c.hash }));
+      const outcome = await api.rebaseStart(dir, currentBranch, items);
+      if (outcome.conflicts !== undefined && outcome.conflicts.length > 0) {
+        setNotice(t("merge.conflicts", { n: outcome.conflicts.length }));
+      } else {
+        setNotice(t("history.rebased", { from: branchFilter, to: currentBranch }));
+      }
+      await refreshRows();
+      onChanged();
+    } catch (caught) {
+      setError((caught as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   // Branch filter options: local branches (bare names) + remote-tracking
   // branches (prefixed "remotes/<remote>/<branch>"), grouped in the dropdown.
   const localBranchOptions = branches.filter((b) => !b.startsWith("remotes/"));
@@ -558,22 +652,7 @@ export function HistoryView(props: {
             title={t("action.refresh")}
             onClick={() => {
               setRows(null);
-              void (async () => {
-                try {
-                  const filters = {
-                    ...(branchFilter !== "" ? { branch: branchFilter } : {}),
-                    ...(authorFilter !== "" ? { author: authorFilter } : {}),
-                    ...(sinceFilter !== "" ? { since: sinceFilter } : {}),
-                    ...(untilFilter !== "" ? { until: untilFilter } : {})
-                  };
-                  const graphRows = filePathFilter !== null
-                    ? await api.fileLog(dir, filePathFilter, 50).then((cs: CommitInfo[]) => cs.map((c) => ({ graph: [] as GraphRow["graph"], ...c })))
-                    : await api.logGraph(dir, 100, filters);
-                  setRows(graphRows);
-                } catch (caught) {
-                  setError((caught as Error).message);
-                }
-              })();
+              void refreshRows();
             }}
           >
             {t("action.refresh")}
@@ -647,6 +726,18 @@ export function HistoryView(props: {
               ✕ {t("history.fileFilterClear")}
             </button>
           )}
+          <button
+            type="button"
+            className="gitui-btn"
+            title={t("history.moreHint")}
+            disabled={busy || dir === ""}
+            onClick={(event) => {
+              const rect = event.currentTarget.getBoundingClientRect();
+              setMoreMenu({ x: rect.left, y: rect.bottom + 4 });
+            }}
+          >
+            {t("history.more")}
+          </button>
         </div>
         <div className="gitui-history-layout">
           <div
@@ -703,6 +794,7 @@ export function HistoryView(props: {
                 <span className="gitui-commit-meta">{formatShortDate(row.date)}</span>
               </div>
             ))}
+          {notice !== null && <div className="gitui-ok" style={{ padding: "4px 10px" }}>{notice}</div>}
           {error !== null && <div className="gitui-error">{error}</div>}
         </div>
       </div>
@@ -732,6 +824,30 @@ export function HistoryView(props: {
       </div>
       {menu !== null && (
         <Menu x={menu.x} y={menu.y} items={commitMenuItems(menu.hash)} onClose={() => setMenu(null)} />
+      )}
+      {moreMenu !== null && (
+        <Menu
+          x={moreMenu.x}
+          y={moreMenu.y}
+          items={[
+            {
+              label: t("history.mergeToCurrent", { from: branchFilter, to: currentBranch ?? "" }),
+              disabled: busy || branchFilter === "" || !currentBranch || branchFilter === currentBranch,
+              onClick: () => void mergeToCurrentBranch()
+            },
+            {
+              label: t("history.rebaseToCurrent", { from: branchFilter, to: currentBranch ?? "" }),
+              disabled:
+                busy ||
+                branchFilter === "" ||
+                !currentBranch ||
+                branchFilter === currentBranch ||
+                branchFilter.startsWith("remotes/"),
+              onClick: () => void rebaseToCurrentBranch()
+            }
+          ]}
+          onClose={() => setMoreMenu(null)}
+        />
       )}
       </div>
       {hoverInfo !== null && (
