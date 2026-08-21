@@ -304,6 +304,65 @@ export default class GitService extends TypertRemoteService {
     };
   }
 
+  // ── clone ───────────────────────────────────────────────────────────────
+
+  /**
+   * Clone a remote repository into `target` (git clone semantics: the target
+   * directory is created when missing, and must be empty when it already
+   * exists). Resolves to the repository root on success.
+   */
+  async clone(request: { url: string; target: string }): Promise<GitResult<{ root: string }>> {
+    const url = request.url.trim();
+    const target = resolve(request.target.trim());
+    const parent = dirname(target);
+    if (existsSync(target)) {
+      try {
+        if (readdirSync(target).length > 0) {
+          return { ok: false, error: fail("target-exists", `目标目录已存在且不是空目录：${target}`) };
+        }
+      } catch {
+        return { ok: false, error: fail("target-exists", `无法读取目标目录：${target}`) };
+      }
+    }
+    if (!existsSync(parent)) {
+      try {
+        mkdirSync(parent, { recursive: true });
+      } catch {
+        return { ok: false, error: fail("write-failed", `无法创建父目录：${parent}`) };
+      }
+    }
+    // Cloning a large repository can take a while — allow up to 10 minutes.
+    const run = await this.cli.run(["clone", url, target], {
+      cwd: parent,
+      timeoutMs: 10 * 60 * 1000
+    });
+    if (run.code !== 0) {
+      const stderr = run.stderr.trim();
+      // A failed clone may leave an empty target directory behind; clean it up.
+      try {
+        if (existsSync(target) && readdirSync(target).length === 0) {
+          rmSync(target, { recursive: true, force: true });
+        }
+      } catch {
+        /* best-effort cleanup */
+      }
+      if (/already exists and is not an empty directory/i.test(stderr)) {
+        return { ok: false, error: fail("target-exists", `目标目录已存在且不是空目录：${target}`) };
+      }
+      if (/authentication failed|Permission denied \(publickey\)|could not read Username/i.test(stderr)) {
+        return { ok: false, error: fail("auth-failed", withGitDetail("克隆认证失败（HTTPS 凭据或 SSH 密钥）", stderr)) };
+      }
+      if (/could not resolve host|unable to access|Connection timed out|Connection refused/i.test(stderr)) {
+        return { ok: false, error: fail("network-error", withGitDetail("无法访问仓库地址，请检查网络与 URL", stderr)) };
+      }
+      if (/repository .*not found|not found/i.test(stderr)) {
+        return { ok: false, error: fail("repo-not-found", withGitDetail("仓库不存在或没有访问权限", stderr)) };
+      }
+      return { ok: false, error: fail("git-error", withGitDetail("克隆失败", stderr)) };
+    }
+    return { ok: true, value: { root: target } };
+  }
+
   // ── AI .gitignore (DSH LLM powered) ────────────────────────────────────────
 
   /**

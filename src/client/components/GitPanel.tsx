@@ -15,6 +15,7 @@ import { NO_WS_FLAGS, wsFlagsActive } from "../../types.js";
 import { Menu, type MenuItem } from "./Menu.js";
 import { PushDialog } from "./PushDialog.js";
 import { RebaseDialog } from "./RebaseDialog.js";
+import { CloneDialog } from "./CloneDialog.js";
 import {
   FONT_SCALE_MAX,
   FONT_SCALE_MIN,
@@ -493,6 +494,8 @@ export function GitPanel(props: {
   const [menu, setMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);
   /** Push preview dialog. */
   const [pushOpen, setPushOpen] = useState(false);
+  /** Clone repository dialog. */
+  const [cloneOpen, setCloneOpen] = useState(false);
   /** Interactive rebase dialog. */
   const [rebaseOpen, setRebaseOpen] = useState(false);
   const [rebaseBaseHint, setRebaseBaseHint] = useState("");
@@ -1691,6 +1694,21 @@ export function GitPanel(props: {
           onClose={() => setRebaseOpen(false)}
         />
       )}
+      {cloneOpen && (
+        <CloneDialog
+          api={api}
+          t={t}
+          sessionDir={sessionCwd}
+          onDone={(root) => {
+            setCloneOpen(false);
+            gitUiSetDir(root);
+            gitUiSetFollowSession(false);
+            gitUiAddRecentDir(root);
+            setNotice(t("clone.done", { root }));
+          }}
+          onClose={() => setCloneOpen(false)}
+        />
+      )}
     </>
   );
 
@@ -1837,6 +1855,15 @@ export function GitPanel(props: {
       </button>
       <button type="button" className="gitui-btn" disabled={busy || statusLoading || dir === ""} onClick={() => void refresh()}>
         ↻
+      </button>
+      <button
+        type="button"
+        className="gitui-btn"
+        title={t("clone.title")}
+        disabled={busy}
+        onClick={() => setCloneOpen(true)}
+      >
+        ⤓ {t("clone.action")}
       </button>
       {status !== null && (
         <button

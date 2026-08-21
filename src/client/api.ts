@@ -122,6 +122,7 @@ type Namespace = {
   }): Promise<GitResult<{ path: string }>>;
   repos(request: { dirs: string[] }): Promise<GitResult<{ repos: RepoProbe[] }>>;
   init(request: { dir: string }): Promise<GitResult<{ root: string }>>;
+  clone(request: { url: string; target: string }): Promise<GitResult<{ root: string }>>;
   suggestGitignore(request: { dir: string }): Promise<GitResult<{ path: string; changed: boolean }>>;
   commitDetail(request: { dir: string; hash: string }): Promise<GitResult<CommitDetail>>;
   commitDiff(request: { dir: string; hash: string; path?: string }): Promise<GitResult<{ files: DiffFile[] }>>;
@@ -366,6 +367,12 @@ export class GitApi {
   /** Run `git init` in `dir`; resolves to the repository root. */
   async init(dir: string): Promise<string> {
     const value = await this.call<{ root: string }>("init", { dir });
+    return value.root;
+  }
+
+  /** Clone a remote repository into `target`; resolves to the repository root. */
+  async clone(url: string, target: string): Promise<string> {
+    const value = await this.call<{ root: string }>("clone", { url, target });
     return value.root;
   }
 

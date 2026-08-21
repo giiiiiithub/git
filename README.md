@@ -11,6 +11,7 @@ DSH Web UI 的 Git 面板（Git panel）插件，提供 IDEA 风格的版本控�
 - **历史**：`git log --graph` 提交图、提交详情、文件历史、两分支对比、与工作区对比。
 - **分支**：新建/切换/重命名/删除分支、远程分支检出与拉取。
 - **合并冲突**：冲突定位、左右两侧一键取舍、手动编辑、保存并标记已解决。
+- **克隆**：从远程仓库克隆到当前会话目录下的子目录，或任意指定目标路径（`git clone`，目标不存在则创建、已存在须为空）。
 - **远程**：远程仓库管理、推送（含 `--force-with-lease`、`--follow-tags`、推送前预览）、抓取、拉取（merge/rebase 策略）。
 - **Stash / Rebase / Tag**：暂存栈管理、交互式 rebase（pick/reword/squash/fixup/drop）、轻量/附注标签。
 - **其它**：Git 配置查看与编辑、文件树浏览/编辑/新建/删除、changelist、AI 更新 `.gitignore`。

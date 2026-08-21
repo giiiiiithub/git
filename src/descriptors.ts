@@ -75,6 +75,7 @@ export const DESCRIPTORS: Descriptor[] = [
   def("resolveFile", S.resolveFileRequestSchema, "GitResolveFileRequest", S.resolveFileResultSchema, "GitResolveFileResult"),
   def("repos", S.reposRequestSchema, "GitReposRequest", S.reposResultSchema, "GitReposResult"),
   def("init", S.initRequestSchema, "GitInitRequest", S.initResultSchema, "GitInitResult"),
+  def("clone", S.cloneRequestSchema, "GitCloneRequest", S.cloneResultSchema, "GitCloneResult"),
   def("suggestGitignore", S.suggestGitignoreRequestSchema, "GitSuggestGitignoreRequest", S.suggestGitignoreResultSchema, "GitSuggestGitignoreResult"),
   def("commitDetail", S.commitDetailRequestSchema, "GitCommitDetailRequest", S.commitDetailResultSchema, "GitCommitDetailResult"),
   def("commitDiff", S.commitDiffRequestSchema, "GitCommitDiffRequest", S.commitDiffResultSchema, "GitCommitDiffResult"),

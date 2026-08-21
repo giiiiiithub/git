@@ -686,6 +686,12 @@ const CSS = `
 .gitui-dialog-body { display: flex; flex-direction: column; min-height: 0; }
 .gitui-dialog-list { overflow-y: auto; min-height: 120px; border-top: 1px solid var(--git-ui-border); }
 .gitui-rebase-dialog { width: 720px; }
+.gitui-clone-dialog { width: 560px; }
+.gitui-clone-row { display: flex; align-items: center; gap: 8px; padding: 6px 10px; }
+.gitui-clone-row .gitui-dir { flex: 1; min-width: 0; }
+.gitui-clone-label { flex: 0 0 auto; font-size: calc(12px * var(--git-ui-font-scale, 1)); color: var(--git-ui-text-dim); }
+.gitui-clone-foot { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-top: 1px solid var(--git-ui-border); }
+.gitui-clone-hint { font-size: calc(11px * var(--git-ui-font-scale, 1)); color: var(--git-ui-text-dim); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .gitui-rebase-base { flex: 0 1 220px; }
 .gitui-rebase-row { display: flex; align-items: center; gap: 8px; padding: 3px 10px; }
 .gitui-rebase-row:hover { background: var(--dsw-alias-bg-layer-1, rgba(128,128,128,.08)); }

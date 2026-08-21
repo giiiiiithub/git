@@ -408,6 +408,20 @@ export const initResultSchema = resultSchema(
   z.object({ root: z.string() })
 );
 
+// ── clone ────────────────────────────────────────────────────────────────────
+
+export const cloneRequestSchema = z.object({
+  /** Remote repository URL (https, ssh, git, file…). */
+  url: z.string().min(1),
+  /** Target directory — git clone semantics: created when missing, must be
+   *  empty when it already exists. */
+  target: z.string().min(1)
+});
+
+export const cloneResultSchema = resultSchema(
+  z.object({ root: z.string() })
+);
+
 // ── AI .gitignore (DSH LLM powered) ─────────────────────────────────────────
 
 export const suggestGitignoreRequestSchema = dirRequestSchema;
