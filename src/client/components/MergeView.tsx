@@ -9,6 +9,7 @@ import type { GitApi } from "../api.js";
 import type { ConflictView, MergeOutcome, RepoStatus } from "../../types.js";
 import type { GitUiT } from "./DiffView.js";
 import { MergeRevisions } from "./MergeRevisions.js";
+import { Toast } from "./Toast.js";
 
 export function MergeView(props: {
   api: GitApi;
@@ -237,7 +238,7 @@ export function MergeView(props: {
               </button>
             )}
           </div>
-          {notice !== null && <div className="gitui-ok" style={{ padding: "8px 0 0" }}>{notice}</div>}
+          <Toast message={notice} />
           {mergeError !== null && <div className="gitui-error" style={{ padding: "8px 0 0" }}>{mergeError}</div>}
         </div>
       </div>
@@ -316,6 +317,7 @@ export function MergeView(props: {
         ))}
       </div>
       {mergeError !== null && <div className="gitui-error">{mergeError}</div>}
+      <Toast message={notice} />
     </div>
   );
 }

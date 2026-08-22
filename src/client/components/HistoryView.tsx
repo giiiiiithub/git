@@ -6,13 +6,14 @@
  * menu on each commit offers IDEA-style actions, including reset / checkout /
  * "show diff with working tree".
  */
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { GitApi } from "../api.js";
-import type { CommitDetail, CommitInfo, DiffFile, GraphRow } from "../../types.js";
+import type { CommitDetail, CommitInfo, DiffFile, GraphRow, OperationOutcome } from "../../types.js";
 import { DiffView, type GitUiT } from "./DiffView.js";
 import { Splitter } from "./Splitter.js";
 import { SPLIT_MIN, gitUiSetFullscreen } from "../store.js";
 import { Menu, type MenuItem } from "./Menu.js";
+import { Toast } from "./Toast.js";
 
 function formatDate(timestamp: number): string {
   const date = new Date(timestamp);
@@ -326,10 +327,17 @@ export function HistoryView(props: {
   currentBranch?: string | null;
   /** Open the interactive rebase dialog (fallback when the host lacks base support). */
   onOpenRebase?: (base?: string) => void;
+  /** A merge/rebase/cherry-pick/revert stopped on conflicts: jump to the
+   *  Merge tab so the user can resolve them. */
+  onOpenConflicts?: () => void;
 }): JSX.Element {
-  const { api, dir, t, onChanged, splitWidth, onSplitWidth, onSplitReset, fileFilterInit, onFileFilterConsumed, fullscreen, currentBranch, onOpenRebase } = props;
+  const { api, dir, t, onChanged, splitWidth, onSplitWidth, onSplitReset, fileFilterInit, onFileFilterConsumed, fullscreen, currentBranch, onOpenRebase, onOpenConflicts } = props;
   const [rows, setRows] = useState<GraphRow[] | null>(null);
   const [selectedHash, setSelectedHash] = useState<string | null>(null);
+  /** Multi-selection (Ctrl/Shift+click): hashes in click order. */
+  const [selectedCommits, setSelectedCommits] = useState<string[]>([]);
+  /** Anchor row index for Shift+click range selection. */
+  const anchorIndexRef = useRef<number>(-1);
   /** Handle CommitDetailPanel's worktree-compare toggle for the context menu. */
   const detailWorktreeRef = useRef<(() => void) | undefined>(undefined);
   /** Hover popup: lazily loads the commit metadata for the row under the cursor. */
@@ -392,8 +400,8 @@ export function HistoryView(props: {
   const [branches, setBranches] = useState<string[]>([]);
   /** Authors of the current branch filter range (dropdown options). */
   const [authors, setAuthors] = useState<Array<{ name: string; email: string; count: number }>>([]);
-  /** Context menu on a commit row. */
-  const [menu, setMenu] = useState<{ x: number; y: number; hash: string } | null>(null);
+  /** Context menu on a commit row (right-click inside the selection acts on all of it). */
+  const [menu, setMenu] = useState<{ x: number; y: number; hashes: string[] } | null>(null);
 
   // Author list follows the branch filter; clear the selection when the
   // selected author no longer exists in the new range.
@@ -478,80 +486,178 @@ export function HistoryView(props: {
     };
   }, [api, dir, filePathFilter, branchFilter, authorFilter, sinceFilter, untilFilter]);
 
-  /** IDEA-style commit context menu. */
-  function commitMenuItems(hash: string): MenuItem[] {
-    return [
-      {
-        label: t("menu.copyHash"),
-        onClick: () => void navigator.clipboard?.writeText(hash).catch(() => {})
-      },
-      { separator: true, label: "" },
-      {
-        label: t("menu.checkoutRevision"),
-        onClick: () => {
-          if (window.confirm(t("menu.checkoutRevisionConfirm", { hash: hash.slice(0, 7) }))) {
-            void api.checkout(dir, hash).then(onChanged).catch((caught) => setError((caught as Error).message));
+  /** Rows after the search filter — the range a Shift+click extends over. */
+  const filteredRows = useMemo<GraphRow[]>(() => {
+    if (rows === null) return [];
+    const q = query.trim().toLowerCase();
+    if (q === "") return rows;
+    return rows.filter(
+      (row) =>
+        row.subject.toLowerCase().includes(q) ||
+        row.author.toLowerCase().includes(q) ||
+        row.short.toLowerCase().includes(q) ||
+        row.hash.toLowerCase().includes(q)
+    );
+  }, [rows, query]);
+
+  /** hash → row lookup, for ordering multi-selection actions oldest-first. */
+  const rowByHash = useMemo(() => new Map(filteredRows.map((row) => [row.hash, row])), [filteredRows]);
+
+  /** Drop stale selections when the visible log changes (filters, rewrites). */
+  useEffect(() => {
+    if (rows === null) return;
+    const alive = new Set(rows.map((row) => row.hash));
+    setSelectedCommits((prev) => prev.filter((hash) => alive.has(hash)));
+  }, [rows]);
+
+  /** Row click with Ctrl/Shift multi-selection (IDEA-style). */
+  function onRowClick(event: React.MouseEvent, hash: string, index: number): void {
+    if (event.ctrlKey || event.metaKey) {
+      // Toggle one commit; the detail panel follows the clicked row.
+      setSelectedHash(hash);
+      setSelectedCommits((prev) =>
+        prev.includes(hash) ? prev.filter((h) => h !== hash) : [...prev, hash]
+      );
+      anchorIndexRef.current = index;
+    } else if (event.shiftKey) {
+      // Extend the selection from the anchor row to this one (inclusive).
+      const anchor = anchorIndexRef.current >= 0 ? anchorIndexRef.current : index;
+      const start = Math.min(anchor, index);
+      const end = Math.max(anchor, index);
+      setSelectedHash(hash);
+      setSelectedCommits(filteredRows.slice(start, end + 1).map((row) => row.hash));
+      anchorIndexRef.current = index;
+    } else {
+      setSelectedHash(hash);
+      setSelectedCommits([hash]);
+      anchorIndexRef.current = index;
+    }
+  }
+
+  /** IDEA-style commit context menu; `hashes` is the whole selection. */
+  function commitMenuItems(hashes: string[]): MenuItem[] {
+    const single = hashes.length <= 1;
+    const hash = hashes[0] ?? "";
+    const items: MenuItem[] = [];
+    if (!single) {
+      items.push({ label: t("history.selectedCount", { n: String(hashes.length) }), disabled: true });
+    }
+    items.push({
+      label: single ? t("menu.copyHash") : t("menu.copyHashes"),
+      onClick: () => void navigator.clipboard?.writeText(hashes.join("\n")).catch(() => {})
+    });
+    if (single) {
+      items.push(
+        { separator: true, label: "" },
+        {
+          label: t("menu.checkoutRevision"),
+          onClick: () => {
+            if (window.confirm(t("menu.checkoutRevisionConfirm", { hash: hash.slice(0, 7) }))) {
+              void api.checkout(dir, hash).then(onChanged).catch((caught) => setError((caught as Error).message));
+            }
           }
-        }
-      },
-      {
-        label: t("menu.createBranchHere"),
-        onClick: () => {
-          const name = window.prompt(t("menu.createBranchHerePrompt"), "");
-          if (name !== null && name.trim() !== "") {
-            void api.checkout(dir, name.trim(), true, hash).then(onChanged).catch((caught) => setError((caught as Error).message));
+        },
+        {
+          label: t("menu.createBranchHere"),
+          onClick: () => {
+            const name = window.prompt(t("menu.createBranchHerePrompt"), "");
+            if (name !== null && name.trim() !== "") {
+              void api.checkout(dir, name.trim(), true, hash).then(onChanged).catch((caught) => setError((caught as Error).message));
+            }
           }
+        },
+        {
+          label: t("menu.resetToHere"),
+          children: (["soft", "mixed", "hard"] as const).map((mode) => ({
+            label: mode,
+            danger: mode === "hard",
+            onClick: () => void api.reset(dir, mode, hash).then(onChanged).catch((caught) => setError((caught as Error).message))
+          }))
         }
-      },
-      {
-        label: t("menu.resetToHere"),
-        children: (["soft", "mixed", "hard"] as const).map((mode) => ({
-          label: mode,
-          danger: mode === "hard",
-          onClick: () => void api.reset(dir, mode, hash).then(onChanged).catch((caught) => setError((caught as Error).message))
-        }))
-      },
-      { separator: true, label: "" },
-      {
-        label: t("cherryPick"),
-        onClick: () => {
-          void api.cherryPick(dir, hash).then(onChanged).catch((caught) => setError((caught as Error).message));
-        }
-      },
-      {
-        label: t("revert"),
-        onClick: () => {
-          void api.revert(dir, hash).then(onChanged).catch((caught) => setError((caught as Error).message));
-        }
-      },
-      {
-        label: t("tag.create"),
-        onClick: () => {
-          const name = window.prompt(t("tag.createPrompt"), "");
-          if (name !== null && name.trim() !== "") {
-            void api.tagCreate(dir, name.trim(), hash).catch((caught) => setError((caught as Error).message));
+      );
+    }
+    items.push({ separator: true, label: "" });
+    // git applies multi-arg operations oldest-first — order the selection so.
+    const ordered = [...hashes].sort(
+      (a, b) => (rowByHash.get(a)?.date ?? 0) - (rowByHash.get(b)?.date ?? 0)
+    );
+    const runOperation = (operation: (list: string[]) => Promise<OperationOutcome>): void => {
+      void (async () => {
+        try {
+          const outcome = await operation(ordered);
+          if (outcome.done === false && (outcome.conflicts?.length ?? 0) > 0) {
+            await api.refreshStatus(dir);
+            onOpenConflicts?.();
+          } else {
+            onChanged();
           }
+        } catch (caught) {
+          setError((caught as Error).message);
         }
+      })();
+    };
+    items.push(
+      {
+        label: single ? t("cherryPick") : t("cherryPick.multi", { n: String(hashes.length) }),
+        onClick: () => runOperation((list) => api.cherryPick(dir, list))
       },
       {
-        label: t("log.worktreeDiff"),
-        disabled: hash !== selectedHash,
-        onClick: () => detailWorktreeRef.current?.()
-      },
-      { separator: true, label: "" },
-      {
-        label: t("menu.copyMetadata"),
-        onClick: () => {
-          void api.commitDetail(dir, hash).then((d) => navigator.clipboard?.writeText(buildMetadataText(t, d))).catch(() => {});
-        }
-      },
-      {
-        label: t("menu.copyMessage"),
-        onClick: () => {
-          void api.commitDetail(dir, hash).then((d) => navigator.clipboard?.writeText(commitMessageText(d))).catch(() => {});
-        }
+        label: single ? t("revert") : t("revert.multi", { n: String(hashes.length) }),
+        onClick: () => runOperation((list) => api.revert(dir, list))
       }
-    ];
+    );
+    if (!single) {
+      items.push({
+        label: t("squash.multi", { n: String(hashes.length) }),
+        onClick: () => {
+          const first = rowByHash.get(ordered[0] ?? "");
+          const message = window.prompt(t("squash.prompt"), first?.subject ?? "");
+          if (message === null) return; // cancelled
+          void (async () => {
+            try {
+              await api.squashCommits(dir, ordered, message);
+              setNotice(t("squash.done"));
+              await refreshRows();
+              onChanged();
+            } catch (caught) {
+              setError((caught as Error).message);
+            }
+          })();
+        }
+      });
+    }
+    if (single) {
+      items.push(
+        {
+          label: t("tag.create"),
+          onClick: () => {
+            const name = window.prompt(t("tag.createPrompt"), "");
+            if (name !== null && name.trim() !== "") {
+              void api.tagCreate(dir, name.trim(), hash).catch((caught) => setError((caught as Error).message));
+            }
+          }
+        },
+        {
+          label: t("log.worktreeDiff"),
+          disabled: hash !== selectedHash,
+          onClick: () => detailWorktreeRef.current?.()
+        },
+        { separator: true, label: "" },
+        {
+          label: t("menu.copyMetadata"),
+          onClick: () => {
+            void api.commitDetail(dir, hash).then((d) => navigator.clipboard?.writeText(buildMetadataText(t, d))).catch(() => {});
+          }
+        },
+        {
+          label: t("menu.copyMessage"),
+          onClick: () => {
+            void api.commitDetail(dir, hash).then((d) => navigator.clipboard?.writeText(commitMessageText(d))).catch(() => {});
+          }
+        }
+      );
+    }
+    return items;
   }
 
   /** Reload the commit list with the current filters. */
@@ -581,7 +687,8 @@ export function HistoryView(props: {
     try {
       const outcome = await api.merge(dir, branchFilter);
       if (outcome.kind === "conflicts") {
-        setNotice(t("merge.conflicts", { n: outcome.conflicts?.length ?? 0 }));
+        await api.refreshStatus(dir);
+        onOpenConflicts?.();
       } else if (outcome.kind === "error") {
         setError(outcome.message ?? "merge failed");
       } else {
@@ -625,9 +732,79 @@ export function HistoryView(props: {
       const items = list.commits.map((c) => ({ action: "pick" as const, hash: c.hash }));
       const outcome = await api.rebaseStart(dir, currentBranch, items);
       if (outcome.conflicts !== undefined && outcome.conflicts.length > 0) {
-        setNotice(t("merge.conflicts", { n: outcome.conflicts.length }));
+        await api.refreshStatus(dir);
+        onOpenConflicts?.();
       } else {
         setNotice(t("history.rebased", { from: branchFilter, to: currentBranch }));
+      }
+      await refreshRows();
+      onChanged();
+    } catch (caught) {
+      setError((caught as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /** Check out the branch selected in the branch filter. */
+  async function checkoutFilteredBranch(): Promise<void> {
+    if (dir === "" || branchFilter === "") return;
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+    try {
+      if (branchFilter.startsWith("remotes/")) {
+        // Remote branch: check out its local counterpart (created when
+        // missing) and pull the latest — same path as the title-bar switcher.
+        const outcome = await api.pullRemoteBranch(dir, branchFilter);
+        setNotice(t("remoteBranch.pulled", { branch: outcome.branch }));
+      } else {
+        await api.checkout(dir, branchFilter);
+        setNotice(t("branch.switched", { name: branchFilter }));
+      }
+      await refreshRows();
+      onChanged();
+    } catch (caught) {
+      setError((caught as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /** Pull the branch selected in the branch filter. When it is not checked
+   *  out yet, switch to it first so the pull applies to that branch. */
+  async function pullFilteredBranch(): Promise<void> {
+    if (dir === "" || branchFilter === "") return;
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+    try {
+      if (branchFilter.startsWith("remotes/")) {
+        const outcome = await api.pullRemoteBranch(dir, branchFilter);
+        setNotice(t("remoteBranch.pulled", { branch: outcome.branch }));
+        await refreshRows();
+        onChanged();
+        return;
+      }
+      if (branchFilter !== currentBranch) {
+        await api.checkout(dir, branchFilter);
+      }
+      const remotes = await api.remotes(dir);
+      const remote = remotes[0]?.name ?? "";
+      if (remote === "") {
+        setError(t("pull.noRemote"));
+        return;
+      }
+      const outcome = await api.pull(dir, remote, branchFilter, "merge");
+      if (outcome.kind === "conflicts") {
+        await api.refreshStatus(dir);
+        onOpenConflicts?.();
+      } else if (outcome.kind === "already-up-to-date") {
+        setNotice(t("pull.upToDate"));
+      } else if (outcome.kind === "error") {
+        setError(outcome.message ?? t("pull.failed"));
+      } else {
+        setNotice(t("pull.done"));
       }
       await refreshRows();
       onChanged();
@@ -646,6 +823,18 @@ export function HistoryView(props: {
   return (
     <div className="gitui-history">
       <div className="gitui-history-tools">
+          <button
+            type="button"
+            className="gitui-btn"
+            title={t("history.moreHint")}
+            disabled={busy || dir === ""}
+            onClick={(event) => {
+              const rect = event.currentTarget.getBoundingClientRect();
+              setMoreMenu({ x: rect.left, y: rect.bottom + 4 });
+            }}
+          >
+            🔀
+          </button>
           <button
             type="button"
             className="gitui-btn"
@@ -726,18 +915,6 @@ export function HistoryView(props: {
               ✕ {t("history.fileFilterClear")}
             </button>
           )}
-          <button
-            type="button"
-            className="gitui-btn"
-            title={t("history.moreHint")}
-            disabled={busy || dir === ""}
-            onClick={(event) => {
-              const rect = event.currentTarget.getBoundingClientRect();
-              setMoreMenu({ x: rect.left, y: rect.bottom + 4 });
-            }}
-          >
-            {t("history.more")}
-          </button>
         </div>
         <div className="gitui-history-layout">
           <div
@@ -750,25 +927,20 @@ export function HistoryView(props: {
             <div className="gitui-diff-placeholder">{t("history.empty")}</div>
           )}
           {rows !== null &&
-            rows
-              .filter((row) => {
-                const q = query.trim().toLowerCase();
-                if (q === "") return true;
-                return (
-                  row.subject.toLowerCase().includes(q) ||
-                  row.author.toLowerCase().includes(q) ||
-                  row.short.toLowerCase().includes(q) ||
-                  row.hash.toLowerCase().includes(q)
-                );
-              })
-              .map((row) => (
+            filteredRows.map((row, index) => (
               <div
                 key={row.hash}
-                className={"gitui-log-row" + (row.hash === selectedHash ? " gitui-log-row-selected" : "")}
-                onClick={() => setSelectedHash(row.hash)}
+                className={
+                  "gitui-log-row" +
+                  (row.hash === selectedHash ? " gitui-log-row-selected" : "") +
+                  (selectedCommits.includes(row.hash) ? " gitui-log-row-multi" : "")
+                }
+                onClick={(event) => onRowClick(event, row.hash, index)}
                 onContextMenu={(event) => {
                   event.preventDefault();
-                  setMenu({ x: event.clientX, y: event.clientY, hash: row.hash });
+                  // Right-clicking inside the selection acts on all of it.
+                  const hashes = selectedCommits.includes(row.hash) ? selectedCommits : [row.hash];
+                  setMenu({ x: event.clientX, y: event.clientY, hashes });
                 }}
                 onMouseEnter={(event) => showHover(event, row.hash)}
                 onMouseLeave={hideHover}
@@ -794,7 +966,6 @@ export function HistoryView(props: {
                 <span className="gitui-commit-meta">{formatShortDate(row.date)}</span>
               </div>
             ))}
-          {notice !== null && <div className="gitui-ok" style={{ padding: "4px 10px" }}>{notice}</div>}
           {error !== null && <div className="gitui-error">{error}</div>}
         </div>
       </div>
@@ -823,13 +994,24 @@ export function HistoryView(props: {
         )}
       </div>
       {menu !== null && (
-        <Menu x={menu.x} y={menu.y} items={commitMenuItems(menu.hash)} onClose={() => setMenu(null)} />
+        <Menu x={menu.x} y={menu.y} items={commitMenuItems(menu.hashes)} onClose={() => setMenu(null)} />
       )}
       {moreMenu !== null && (
         <Menu
           x={moreMenu.x}
           y={moreMenu.y}
           items={[
+            {
+              label: t("history.checkoutBranch", { branch: branchFilter }),
+              disabled: busy || branchFilter === "" || branchFilter === currentBranch,
+              onClick: () => void checkoutFilteredBranch()
+            },
+            {
+              label: t("history.pullBranch", { branch: branchFilter }),
+              disabled: busy || branchFilter === "",
+              onClick: () => void pullFilteredBranch()
+            },
+            { separator: true, label: "" },
             {
               label: t("history.mergeToCurrent", { from: branchFilter, to: currentBranch ?? "" }),
               disabled: busy || branchFilter === "" || !currentBranch || branchFilter === currentBranch,
@@ -849,6 +1031,7 @@ export function HistoryView(props: {
           onClose={() => setMoreMenu(null)}
         />
       )}
+      <Toast message={notice} />
       </div>
       {hoverInfo !== null && (
         <div

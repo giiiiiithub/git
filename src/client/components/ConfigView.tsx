@@ -12,6 +12,7 @@
  */
 import { useEffect, useState } from "react";
 import type { GitApi } from "../api.js";
+import { Toast } from "./Toast.js";
 import type { RemoteInfo } from "../../types.js";
 import type { GitUiT } from "./DiffView.js";
 
@@ -33,7 +34,8 @@ const COMMON_KEYS = [
   "remote.origin.url"
 ];
 
-const SCOPES: ConfigScope[] = ["system", "global", "local"];
+// Display order follows the precedence chain: 项目级(local) > 用户级(global) > 系统级(system).
+const SCOPES: ConfigScope[] = ["local", "global", "system"];
 
 /** Extract the hostname of a remote URL ("https://github.com/x.git" or "git@host:x"). */
 function remoteHost(url: string): string | null {
@@ -361,7 +363,7 @@ export function ConfigView(props: {
         )}
       </div>
       {error !== null && <div className="gitui-error" style={{ padding: "6px 12px 0" }}>{error}</div>}
-      {ok !== null && <div className="gitui-ok" style={{ padding: "6px 12px 0" }}>{ok}</div>}
+      <Toast message={ok} />
     </div>
   );
 }

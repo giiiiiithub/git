@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import type { GitApi } from "../api.js";
 import type { RemoteInfo } from "../../types.js";
 import type { GitUiT } from "./DiffView.js";
+import { Toast } from "./Toast.js";
 
 export function RemoteView(props: {
   api: GitApi;
@@ -217,7 +218,7 @@ export function RemoteView(props: {
         </button>
       </div>
       {error !== null && <div className="gitui-error" style={{ padding: "4px 12px 0" }}>{error}</div>}
-      {ok !== null && <div className="gitui-ok" style={{ padding: "4px 12px 0" }}>{ok}</div>}
+      <Toast message={ok} />
       {adding && (
         <div className="gitui-branch-new gitui-remote-add">
           <input

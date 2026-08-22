@@ -15,6 +15,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { GitApi } from "../api.js";
 import type { ConflictView } from "../../types.js";
 import type { GitUiT } from "./DiffView.js";
+import { Toast } from "./Toast.js";
 
 export interface LiveBlock {
   /** 0-based range in the result text, marker lines inclusive. */
@@ -413,7 +414,7 @@ export function MergeRevisions(props: {
       )}
       <div className="gitui-mr-footer">
         {error !== null && <span className="gitui-error" style={{ padding: 0 }}>{error}</span>}
-        {saved !== null && <span className="gitui-ok" style={{ padding: 0 }}>{saved}</span>}
+        <Toast message={saved} />
         <span style={{ flex: 1 }} />
         <button type="button" className="gitui-btn gitui-btn-primary" disabled={busy} onClick={() => void save()}>
           {t("conflict.save")}

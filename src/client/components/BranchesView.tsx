@@ -9,6 +9,7 @@ import type { GitApi } from "../api.js";
 import type { BranchInfo, CompareFile, TagInfo } from "../../types.js";
 import type { GitUiT } from "./DiffView.js";
 import { Menu, type MenuItem } from "./Menu.js";
+import { Toast } from "./Toast.js";
 
 export function BranchesView(props: {
   api: GitApi;
@@ -17,8 +18,10 @@ export function BranchesView(props: {
   onChanged: () => void;
   /** Open the interactive rebase dialog, optionally with a preset base. */
   onOpenRebase?: (base?: string) => void;
+  /** A merge stopped on conflicts: jump to the Merge tab for resolution. */
+  onOpenConflicts?: () => void;
 }): JSX.Element {
-  const { api, dir, t, onChanged, onOpenRebase } = props;
+  const { api, dir, t, onChanged, onOpenRebase, onOpenConflicts } = props;
   const [branches, setBranches] = useState<BranchInfo[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -144,7 +147,12 @@ export function BranchesView(props: {
         onClick: () => {
           run(t("merge.done", { short: "", subject: branch.name }), async () => {
             const outcome = await api.merge(dir, branch.name);
-            if (outcome.kind === "conflicts") setError(t("merge.conflicts", { n: outcome.conflicts?.length ?? 0 }));
+            if (outcome.kind === "conflicts") {
+              await api.refreshStatus(dir);
+              onOpenConflicts?.();
+            } else if (outcome.kind === "error") {
+              setError(outcome.message ?? "无法开始合并");
+            }
           });
         }
       },
@@ -422,7 +430,7 @@ export function BranchesView(props: {
           {t("action.refresh")}
         </button>
       </div>
-      {notice !== null && <div className="gitui-ok" style={{ padding: "6px 12px 0" }}>{notice}</div>}
+      <Toast message={notice} />
       {error !== null && <div className="gitui-error" style={{ padding: "6px 12px 0" }}>{error}</div>}
       <div className="gitui-branches-scroll">
         {branches === null && <div className="gitui-diff-placeholder">…</div>}

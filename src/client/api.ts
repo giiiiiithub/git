@@ -157,8 +157,13 @@ type Namespace = {
   stashClear(request: { dir: string }): Promise<GitResult<{ cleared: boolean }>>;
   stashShow(request: { dir: string; index: number }): Promise<GitResult<{ lines: string[] }>>;
   stashBranch(request: { dir: string; index: number; name: string }): Promise<GitResult<{ branch: string }>>;
-  cherryPick(request: { dir: string; hash: string }): Promise<GitResult<OperationOutcome>>;
-  revert(request: { dir: string; hash: string }): Promise<GitResult<OperationOutcome>>;
+  cherryPick(request: { dir: string; hash: string | string[] }): Promise<GitResult<OperationOutcome>>;
+  revert(request: { dir: string; hash: string | string[] }): Promise<GitResult<OperationOutcome>>;
+  squashCommits(request: {
+    dir: string;
+    hashes: string[];
+    message: string;
+  }): Promise<GitResult<{ hash: string; short: string }>>;
   reset(request: { dir: string; mode: "soft" | "mixed" | "hard"; ref?: string }): Promise<GitResult<{ reset: boolean; mode: string }>>;
   operationAbort(request: { dir: string }): Promise<GitResult<{ aborted: boolean }>>;
   operationContinue(request: { dir: string; message?: string }): Promise<GitResult<{ continued: boolean; hash?: string }>>;
@@ -526,12 +531,17 @@ export class GitApi {
   }
 
 
-  async cherryPick(dir: string, hash: string): Promise<OperationOutcome> {
+  async cherryPick(dir: string, hash: string | string[]): Promise<OperationOutcome> {
     return this.call<OperationOutcome>("cherryPick", { dir, hash });
   }
 
-  async revert(dir: string, hash: string): Promise<OperationOutcome> {
+  async revert(dir: string, hash: string | string[]): Promise<OperationOutcome> {
     return this.call<OperationOutcome>("revert", { dir, hash });
+  }
+
+  /** Fold the given commits (oldest first) into a single new commit. */
+  async squashCommits(dir: string, hashes: string[], message: string): Promise<{ hash: string; short: string }> {
+    return this.call<{ hash: string; short: string }>("squashCommits", { dir, hashes, message });
   }
 
   async reset(dir: string, mode: "soft" | "mixed" | "hard", ref?: string): Promise<void> {

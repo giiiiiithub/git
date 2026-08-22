@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import type { GitApi } from "../api.js";
 import type { CommitGroup, ExecutedCommit } from "../../types.js";
 import type { GitUiT } from "./DiffView.js";
+import { Toast } from "./Toast.js";
 
 export function CommitPlan(props: {
   api: GitApi;
@@ -145,7 +146,7 @@ export function CommitPlan(props: {
         </div>
       ) : (
         <div className="gitui-commit-plan-actions">
-          <span className="gitui-ok">{t("commit.executed", { n: String(results.length) })}</span>
+          <Toast message={t("commit.executed", { n: String(results.length) })} />
           <button type="button" className="gitui-btn gitui-btn-primary" onClick={() => onDone(results)}>
             {t("commit.doneBtn")}
           </button>

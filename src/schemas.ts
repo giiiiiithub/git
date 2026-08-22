@@ -671,7 +671,8 @@ export const stashBranchResultSchema = resultSchema(
 // ── cherry-pick / revert / reset ─────────────────────────────────────────────
 
 export const cherryPickRequestSchema = dirRequestSchema.extend({
-  hash: z.string().min(1)
+  /** Single commit, or several to apply in one cherry-pick run. */
+  hash: z.union([z.string().min(1), z.array(z.string().min(1))])
 });
 
 export const cherryPickResultSchema = resultSchema(
@@ -683,7 +684,8 @@ export const cherryPickResultSchema = resultSchema(
 );
 
 export const revertRequestSchema = dirRequestSchema.extend({
-  hash: z.string().min(1)
+  /** Single commit, or several to revert in one run. */
+  hash: z.union([z.string().min(1), z.array(z.string().min(1))])
 });
 
 export const revertResultSchema = resultSchema(
@@ -692,6 +694,16 @@ export const revertResultSchema = resultSchema(
     conflicts: z.array(z.string()).optional(),
     message: z.string().optional()
   })
+);
+
+export const squashCommitsRequestSchema = dirRequestSchema.extend({
+  /** Commits to fold into one, oldest first. Must be a contiguous run ending at HEAD. */
+  hashes: z.array(z.string().min(1)).min(2),
+  message: z.string()
+});
+
+export const squashCommitsResultSchema = resultSchema(
+  z.object({ hash: z.string(), short: z.string() })
 );
 
 export const resetRequestSchema = dirRequestSchema.extend({

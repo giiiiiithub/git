@@ -1852,9 +1852,10 @@ export default class GitService extends TypertRemoteService {
 
   // ── cherry-pick / revert / reset ──────────────────────────────────────────
 
-  async cherryPick(request: { dir: string; hash: string }): Promise<GitResult<OperationOutcome>> {
+  async cherryPick(request: { dir: string; hash: string | string[] }): Promise<GitResult<OperationOutcome>> {
     const cwd = resolve(request.dir);
-    const run = await this.cli.run(["cherry-pick", request.hash], { cwd });
+    const hashes = Array.isArray(request.hash) ? request.hash : [request.hash];
+    const run = await this.cli.run(["cherry-pick", ...hashes], { cwd });
     const combined = `${run.stdout}\n${run.stderr}`.trim();
     // git may exit 0 with "nothing to commit" when the patch is already applied.
     if (/empty|already applied|nothing to commit|skipped/i.test(combined)) {
@@ -1876,9 +1877,10 @@ export default class GitService extends TypertRemoteService {
     };
   }
 
-  async revert(request: { dir: string; hash: string }): Promise<GitResult<OperationOutcome>> {
+  async revert(request: { dir: string; hash: string | string[] }): Promise<GitResult<OperationOutcome>> {
     const cwd = resolve(request.dir);
-    const run = await this.cli.run(["revert", "--no-edit", request.hash], { cwd });
+    const hashes = Array.isArray(request.hash) ? request.hash : [request.hash];
+    const run = await this.cli.run(["revert", "--no-edit", ...hashes], { cwd });
     const combined = `${run.stdout}\n${run.stderr}`.trim();
     if (run.code === 0) {
       return { ok: true, value: { done: true } };
@@ -1894,6 +1896,53 @@ export default class GitService extends TypertRemoteService {
       ok: false,
       error: fail("revert-failed", combined.split("\n").filter(Boolean).slice(-2).join("；") || "revert 失败")
     };
+  }
+
+  /**
+   * Squash the given commits (oldest first) into a single commit.
+   * The run must be a contiguous chain ending at HEAD (the top of the current
+   * branch) and the worktree must be clean; implemented via `git reset --soft` + a single commit.
+   */
+  async squashCommits(request: { dir: string; hashes: string[]; message: string }): Promise<GitResult<{ hash: string; short: string }>> {
+    const cwd = resolve(request.dir);
+    const hashes = [...request.hashes];
+    if (hashes.length < 2) {
+      return { ok: false, error: fail("squash-needs-two", "至少需要两个提交才能 squash") };
+    }
+    const headRun = await this.cli.run(["rev-parse", "HEAD"], { cwd });
+    const head = headRun.stdout.trim();
+    if (headRun.code !== 0 || head === "") {
+      return { ok: false, error: fail("not-a-repo", "不是 Git 仓库") };
+    }
+    // The newest selected commit must be HEAD.
+    if (hashes[hashes.length - 1] !== head) {
+      return { ok: false, error: fail("squash-not-head", "只能 squash 当前分支顶部的连续提交") };
+    }
+    // Every selected commit must be the parent of the next one (contiguous chain).
+    for (let i = hashes.length - 1; i > 0; i--) {
+      const parentRun = await this.cli.run(["rev-parse", hashes[i] + "^"], { cwd });
+      if (parentRun.code !== 0 || parentRun.stdout.trim() !== hashes[i - 1]) {
+        return { ok: false, error: fail("squash-not-contiguous", "所选提交不是当前分支顶部的连续提交，无法 squash") };
+      }
+    }
+    // A clean worktree keeps the squashed index limited to the selected commits.
+    const dirty = await this.cli.run(["status", "--porcelain"], { cwd });
+    if (dirty.code === 0 && dirty.stdout.trim() !== "") {
+      return { ok: false, error: fail("dirty", "有未提交改动，请先提交或暂存") };
+    }
+    const base = hashes[0] + "^";
+    const resetRun = await this.cli.run(["reset", "--soft", base], { cwd });
+    if (resetRun.code !== 0) {
+      return { ok: false, error: fail("squash-failed", "squash 失败：" + (resetRun.stderr.trim() || "reset 失败")) };
+    }
+    const msg = request.message.trim() !== "" ? request.message.trim() : "Squash " + hashes.length + " commits";
+    const commitRun = await this.cli.run(["-c", "core.editor=true", "commit", "-m", msg], { cwd });
+    if (commitRun.code !== 0) {
+      return { ok: false, error: fail("squash-failed", "squash 提交失败：" + (commitRun.stderr.trim() || "commit 失败")) };
+    }
+    const hashRun = await this.cli.run(["rev-parse", "HEAD"], { cwd });
+    const hash = hashRun.stdout.trim();
+    return { ok: true, value: { hash, short: hash.length >= 7 ? hash.slice(0, 7) : hash } };
   }
 
   async reset(request: { dir: string; mode: "soft" | "mixed" | "hard"; ref?: string }): Promise<GitResult<{ reset: boolean; mode: string }>> {

@@ -9,6 +9,7 @@ import type { GitApi } from "../api.js";
 import type { DirEntry, FileContent } from "../../types.js";
 import type { GitUiT } from "./DiffView.js";
 import { PaneMinBar, PaneRestoreBar, Splitter } from "./Splitter.js";
+import { Toast } from "./Toast.js";
 
 interface FileTreeViewProps {
   api: GitApi;
@@ -370,8 +371,6 @@ export function FileTreeView(props: FileTreeViewProps): JSX.Element {
                 <span style={{ flex: 1 }} />
                 {fileContent.truncated && <span className="gitui-tree-warn">{t("files.truncated")}</span>}
                 {saveError !== null && <span className="gitui-error">{saveError}</span>}
-                {savedFlash && <span className="gitui-ok">{t("files.savedFlash")}</span>}
-                {notice !== null && <span className="gitui-ok">{notice}</span>}
               </div>
               <textarea
                 className="gitui-filetree-textarea"
@@ -391,6 +390,7 @@ export function FileTreeView(props: FileTreeViewProps): JSX.Element {
               />
             </>
           )}
+          <Toast message={savedFlash ? t("files.savedFlash") : notice} />
         </div>
       </div>
     </div>

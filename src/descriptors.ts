@@ -94,6 +94,7 @@ export const DESCRIPTORS: Descriptor[] = [
   def("stashDrop", S.stashDropRequestSchema, "GitStashDropRequest", S.stashDropResultSchema, "GitStashDropResult"),
   def("cherryPick", S.cherryPickRequestSchema, "GitCherryPickRequest", S.cherryPickResultSchema, "GitCherryPickResult"),
   def("revert", S.revertRequestSchema, "GitRevertRequest", S.revertResultSchema, "GitRevertResult"),
+  def("squashCommits", S.squashCommitsRequestSchema, "GitSquashCommitsRequest", S.squashCommitsResultSchema, "GitSquashCommitsResult"),
   def("reset", S.resetRequestSchema, "GitResetRequest", S.resetResultSchema, "GitResetResult"),
   def("operationAbort", S.operationAbortRequestSchema, "GitOperationAbortRequest", S.operationAbortResultSchema, "GitOperationAbortResult"),
   def("operationContinue", S.operationContinueRequestSchema, "GitOperationContinueRequest", S.operationContinueResultSchema, "GitOperationContinueResult"),

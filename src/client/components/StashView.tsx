@@ -11,6 +11,7 @@ import { useEffect, useState } from "react";
 import type { GitApi } from "../api.js";
 import type { StashEntry } from "../../types.js";
 import type { GitUiT } from "./DiffView.js";
+import { Toast } from "./Toast.js";
 
 export function StashView(props: {
   api: GitApi;
@@ -300,7 +301,7 @@ export function StashView(props: {
           ))}
       </div>
       {error !== null && <div className="gitui-error" style={{ padding: "6px 12px 0" }}>{error}</div>}
-      {ok !== null && <div className="gitui-ok" style={{ padding: "6px 12px 0" }}>{ok}</div>}
+      <Toast message={ok} />
     </div>
   );
 }

@@ -15,6 +15,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { ChangeRef, DiffFile, DiffHunk, DiffLine, WsFlags } from "../../types.js";
 import { NO_WS_FLAGS } from "../../types.js";
 import type { GitApi } from "../api.js";
+import { Toast } from "./Toast.js";
 import {
   adjustFontSize,
   loadDiffSettings,
@@ -1402,11 +1403,7 @@ export function DiffView(props: {
           </button>
         </div>
       )}
-      {(savedFlash || restoredFlash) && (
-        <div className="gitui-ok" style={{ padding: "2px 10px 6px" }}>
-          {savedFlash ? t("diff.saved") : t("diff.restored")}
-        </div>
-      )}
+      <Toast message={savedFlash ? t("diff.saved") : restoredFlash ? t("diff.restored") : null} />
       {editBlocked !== null && (
         <div className="gitui-tree-warn" style={{ padding: "2px 10px 6px" }}>{editBlocked}</div>
       )}
@@ -1651,7 +1648,7 @@ export function CommitBox(props: {
         </>
       )}
       {error !== null && <div className="gitui-error">{error}</div>}
-      {ok !== null && <div className="gitui-ok">{ok}</div>}
+      <Toast message={ok} />
     </div>
   );
 }

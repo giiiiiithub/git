@@ -44,6 +44,7 @@ import {
   useGitUi
 } from "../store.js";
 import { PaneMinBar, PaneRestoreBar, Splitter } from "./Splitter.js";
+import { Toast } from "./Toast.js";
 import { DiffView, CommitBox, type GitUiT } from "./DiffView.js";
 import { MergeView } from "./MergeView.js";
 import { HistoryView } from "./HistoryView.js";
@@ -1147,6 +1148,8 @@ export function GitPanel(props: {
         setNotice(t("pull.done"));
       }
       await api.refreshStatus(dir);
+      // The notice promises resolution on the Merge tab — actually go there.
+      if (outcome.kind === "conflicts") setTab("merge");
     } catch (caught) {
       setNotice((caught as Error).message);
     } finally {
@@ -1465,7 +1468,7 @@ export function GitPanel(props: {
       ) : statusError !== null ? (
         <div className="gitui-error">{statusError}</div>
       ) : null}
-      {notice !== null && <div className="gitui-ok">{notice}</div>}
+      <Toast message={notice} />
       {commitPlanOpen ? (
         <CommitPlan
           api={api}
@@ -1559,6 +1562,7 @@ export function GitPanel(props: {
               setRebaseBaseHint(base ?? "");
               setRebaseOpen(true);
             }}
+            onOpenConflicts={() => setTab("merge")}
           />
         ) : tab === "branches" ? (
           <BranchesView
@@ -1570,6 +1574,7 @@ export function GitPanel(props: {
               setRebaseBaseHint(base ?? "");
               setRebaseOpen(true);
             }}
+            onOpenConflicts={() => setTab("merge")}
           />
         ) : tab === "stash" ? (
           <StashView

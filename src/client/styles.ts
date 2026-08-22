@@ -96,6 +96,8 @@ const CSS = `
   overflow: hidden;
   display: flex; flex-direction: column;
   height: var(--git-ui-panel-height, 420px);
+  /* Anchor for the transient toast overlay. */
+  position: relative;
 }
 .gitui-resize {
   flex: none;
@@ -272,7 +274,7 @@ const CSS = `
   width: 42%; flex: none; min-width: 0; overflow-y: auto; overflow-x: hidden;
   padding: 4px 0;
 }
-.gitui-filetree-editor { flex: 1; display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.gitui-filetree-editor { flex: 1; display: flex; flex-direction: column; min-width: 0; min-height: 0; position: relative; }
 .gitui-filetree-editor-header {
   display: flex; align-items: center; gap: 8px; padding: 4px 10px;
   border-bottom: 1px solid var(--git-ui-border); font-size: calc(12px * var(--git-ui-font-scale, 1)); flex: none;
@@ -398,12 +400,12 @@ const CSS = `
 .gitui-file:hover .gitui-file-action { visibility: visible; }
 .gitui-file-action:hover { color: var(--git-ui-accent); background: rgba(128,128,128,.15); }
 
-.gitui-detail { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+.gitui-detail { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; position: relative; }
 .gitui-detail-header {
   display: flex; align-items: center; gap: 8px; padding: 6px 10px;
   border-bottom: 1px solid var(--git-ui-border); font-size: calc(12px * var(--git-ui-font-scale, 1));
 }
-.gitui-diff { flex: 1; display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+.gitui-diff { flex: 1; display: flex; flex-direction: column; min-height: 0; min-width: 0; position: relative; }
 /* Column captions above the diff ("HEAD" / "Working Tree" etc.), aligned
    with the two 1fr columns of .gitui-diff-row below. */
 .gitui-diff-sides {
@@ -720,6 +722,36 @@ const CSS = `
 .gitui-commit-row label { display: flex; align-items: center; gap: 4px; font-size: calc(12px * var(--git-ui-font-scale, 1)); color: var(--git-ui-text-dim); cursor: pointer; }
 .gitui-error { color: var(--dsw-alias-state-error-primary, #f85149); font-size: calc(12px * var(--git-ui-font-scale, 1)); padding: 2px 10px; }
 .gitui-ok { color: var(--dsw-alias-state-success-primary, #3fb950); font-size: calc(12px * var(--git-ui-font-scale, 1)); padding: 2px 10px; }
+
+/* Transient action-feedback toast: floats above the content (bottom-center
+   of the nearest positioned panel container) and auto-dismisses, so it never
+   takes layout height like the old persistent green notice bars. */
+.gitui-toast {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  z-index: 9000;
+  max-width: min(520px, 92%);
+  padding: 6px 14px;
+  border-radius: 8px;
+  background: var(--dsw-alias-bg-layer-1, #1e1e1e);
+  border: 1px solid var(--git-ui-border);
+  box-shadow: 0 6px 22px rgba(0, 0, 0, .35);
+  color: var(--dsw-alias-state-success-primary, #3fb950);
+  font-size: calc(12px * var(--git-ui-font-scale, 1));
+  line-height: 1.5;
+  text-align: center;
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity .24s ease;
+  animation: gitui-toast-in .18s ease-out;
+}
+.gitui-toast-leave { opacity: 0; }
+@keyframes gitui-toast-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(6px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
 .gitui-notrepo {
   display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
   padding: 10px; margin: 4px 10px; border: 1px dashed var(--git-ui-border);
@@ -773,7 +805,7 @@ const CSS = `
 .gitui-conflict-body { padding: 8px 10px; }
 
 /* merge revisions (IDEA-style three-pane conflict resolution) */
-.gitui-mr { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.gitui-mr { display: flex; flex-direction: column; flex: 1; min-height: 0; position: relative; }
 .gitui-mr-toolbar {
   display: flex; align-items: center; gap: 6px; padding: 4px 10px;
   border-bottom: 1px solid var(--git-ui-border); font-size: calc(12px * var(--git-ui-font-scale, 1)); flex-wrap: wrap;
@@ -853,7 +885,7 @@ const CSS = `
 .gitui-remotes .gitui-branch-new { flex-wrap: wrap; }
 .gitui-remote-name { flex: none; max-width: 110px; font-weight: 600; }
 /* Remotes tab */
-.gitui-remotes-view { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.gitui-remotes-view { flex: 1; display: flex; flex-direction: column; min-height: 0; position: relative; }
 .gitui-remotes-view .gitui-detail-header { flex: none; }
 .gitui-remotes-list { flex: 1; overflow-y: auto; padding: 6px 0; min-height: 0; }
 .gitui-remotes-list .gitui-branch-row { padding: 5px 12px; }
@@ -892,7 +924,7 @@ const CSS = `
   border: 1px solid var(--git-ui-border); border-radius: 8px; padding: 0 5px;
 }
 /* Full-width History toolbar sits above the log/detail split. */
-.gitui-history { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
+.gitui-history { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; position: relative; }
 .gitui-history-layout { display: flex; flex: 1; min-height: 0; overflow: hidden; }
 .gitui-history-side {
   width: 44%; min-width: 220px; max-width: 380px;
@@ -940,6 +972,8 @@ const CSS = `
 .gitui-hover-more { color: var(--git-ui-text-dim); }
 .gitui-log-row:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,.12)); }
 .gitui-log-row-selected { background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,.2)); border-left-color: var(--git-ui-accent); }
+/* Ctrl/Shift multi-selection: accent tint for non-primary rows. */
+.gitui-log-row-multi:not(.gitui-log-row-selected) { background: rgba(77, 159, 255, .10); }
 .gitui-log-row .gitui-commit-subject { font-size: calc(12px * var(--git-ui-font-scale, 1)); }
 .gitui-history-detail {
   flex: 1; min-width: 0;
@@ -1047,7 +1081,7 @@ const CSS = `
 .gitui-branch-new input:focus { border-color: var(--git-ui-accent); }
 
 /* AI commit plan */
-.gitui-commit-plan { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.gitui-commit-plan { display: flex; flex-direction: column; flex: 1; min-height: 0; position: relative; }
 .gitui-commit-plan-list { flex: 1; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 8px; min-height: 0; }
 .gitui-plan-group {
   border: 1px solid var(--git-ui-border); border-radius: 8px; overflow: hidden;

@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import type { GitApi } from "../api.js";
 import type { CommitInfo, RemoteInfo } from "../../types.js";
 import type { GitUiT } from "./DiffView.js";
+import { Toast } from "./Toast.js";
 
 function formatDate(timestamp: number): string {
   const date = new Date(timestamp);
@@ -130,7 +131,7 @@ export function PushDialog(props: {
               ))}
           </div>
           {error !== null && <div className="gitui-error" style={{ padding: "4px 10px" }}>{error}</div>}
-          {ok !== null && <div className="gitui-ok" style={{ padding: "4px 10px" }}>{ok}</div>}
+          <Toast message={ok} />
         </div>
       </div>
     </div>
