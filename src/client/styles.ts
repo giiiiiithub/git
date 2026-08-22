@@ -1142,43 +1142,68 @@ const CSS = `
   padding: 8px 10px; border-top: 1px solid var(--git-ui-border);
 }
 
-/* header action */
-.gitui-header-btn {
-  /* The header slot lives OUTSIDE [data-git-ui-root], so re-declare the
-     theme vars here; without them the badge pill loses its background
-     (var() is invalid at computed-value time) and the count is invisible. */
-  --git-ui-border: var(--dsw-alias-border-l2, rgba(128,128,128,.25));
-  --git-ui-text: var(--dsw-alias-label-primary, inherit);
+/* ── sidebar brand-seat Git control ───────────────────────────────────────
+   Rendered where the whale mark / "DeepSeek Harness" wordmark used to be.
+   The mark seat renders the FULL toggle (⑂ + "Git" + badge) so the icon and
+   label sit side by side in ONE flex control — no shell gap between the two
+   brand seats, and their line boxes are centered together. Lives INSIDE the
+   shell's own <button> (wide brand row / collapsed rail toggle) and outside
+   [data-git-ui-root], so theme vars are re-declared and the control is a
+   role=button span, not a <button> element. */
+.gitui-brand-mark {
   --git-ui-accent: var(--dsw-alias-brand-primary, #4d9fff);
-  display: inline-flex; align-items: center; gap: 4px;
-  background: transparent; border: 1px solid var(--git-ui-border); border-radius: 6px;
-  color: var(--git-ui-text); font-size: calc(12px * var(--git-ui-font-scale, 1)); padding: 2px 8px; cursor: pointer;
-  min-height: 26px;
-}
-.gitui-header-btn:hover { border-color: var(--git-ui-accent); color: var(--git-ui-accent); }
-.gitui-header-btn.gitui-active { border-color: var(--git-ui-accent); color: var(--git-ui-accent); background: rgba(77, 159, 255, .1); }
-
-/* sidebar foot action (sidebar.footer.action): icon-only in the 56px rail,
-   icon + label + badge when wide. Lives OUTSIDE [data-git-ui-root], so the
-   theme vars are re-declared like the header button above. */
-.gitui-sidebar-btn {
-  --git-ui-border: var(--dsw-alias-border-l2, rgba(128,128,128,.25));
   --git-ui-text: var(--dsw-alias-label-secondary, inherit);
-  --git-ui-accent: var(--dsw-alias-brand-primary, #4d9fff);
-  position: relative;
+  display: inline-flex; align-items: center; gap: 4px;
+  height: 24px; padding: 0 2px;
   color: var(--git-ui-text);
-  background: transparent; border: none; border-radius: 8px;
-  padding: 6px; cursor: pointer;
-  min-height: 28px;
+  cursor: pointer; border-radius: 6px;
+  user-select: none;
+  outline: none;
 }
-.gitui-sidebar-btn:hover { color: var(--git-ui-accent); background: rgba(77, 159, 255, .08); }
-.gitui-sidebar-btn.gitui-active { color: var(--git-ui-accent); background: rgba(77, 159, 255, .12); }
-.gitui-sidebar-btn .gitui-badge {
-  position: absolute; top: -1px; right: -1px;
+.gitui-brand-mark:hover,
+.gitui-brand-mark.gitui-active,
+.gitui-brand-mark:focus-visible { color: var(--git-ui-accent); }
+.gitui-brand-mark .gitui-glyph {
+  font-size: 15px; line-height: 1;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.gitui-brand-mark .gitui-brand-label {
+  font-size: 15px; font-weight: 600; letter-spacing: .04em;
+  line-height: 24px; white-space: nowrap;
+}
+.gitui-brand-mark .gitui-brand-badge {
   min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px;
   font-size: calc(10px * var(--git-ui-font-scale, 1));
   line-height: calc(16px * var(--git-ui-font-scale, 1));
 }
+/* Collapsed rail: the control sits inside the fold toggle — icon only. */
+[class*="railMark"] .gitui-brand-mark .gitui-brand-label,
+[class*="railMark"] .gitui-brand-mark .gitui-brand-badge {
+  display: none;
+}
+
+/* ── sidebar: move the New Session button into the session-browser header
+   row (left of the search button) ─────────────────────────────────────────
+   The shell's New Session button sits between the logo row and the session
+   browser. It is removed from flow and absolutely positioned at the browser's
+   section-header row (74px = 6px root padding + 60px logo row + 8px margin),
+   and the row's "Sessions" label is hidden to free that space. Scoped to the
+   deployed sidebar shell (hHd-Xa_root = column, hHd-Xa_collapsed = rail). */
+.hHd-Xa_root:not(.hHd-Xa_collapsed) {
+  position: relative;
+}
+.hHd-Xa_root:not(.hHd-Xa_collapsed) [class*="newSession"] {
+  position: absolute;
+  top: 74px;
+  left: 12px;
+  width: fit-content;
+  max-width: calc(100% - 24px);
+  z-index: 2;
+}
+.hHd-Xa_root:not(.hHd-Xa_collapsed) [class*="sectionLabel"] {
+  display: none;
+}
+
 `;
 
 export function ensureStyles(): void {
