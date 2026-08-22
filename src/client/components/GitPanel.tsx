@@ -16,6 +16,8 @@ import { Menu, type MenuItem } from "./Menu.js";
 import { PushDialog } from "./PushDialog.js";
 import { RebaseDialog } from "./RebaseDialog.js";
 import { CloneDialog } from "./CloneDialog.js";
+import { GetFromRevisionDialog } from "./GetFromRevisionDialog.js";
+import { createPortal } from "react-dom";
 import {
   FONT_SCALE_MAX,
   FONT_SCALE_MIN,
@@ -85,13 +87,25 @@ function shortenPath(path: string, maxSegments = 2): string {
   return "…/" + parts.slice(-maxSegments).join("/");
 }
 
+/** Measure the host conversation's content area for resize clamping:
+ *  the header/tabs bottom (top) and the composer input-card top (bottom). */
+function measureContentBounds(): { top: number; bottom: number } {
+  const seat = document.querySelector("[data-composer-seat]");
+  const root = seat?.parentElement?.parentElement;
+  const header = root?.querySelector(":scope > header") ?? root?.querySelector("header");
+  const card = document.querySelector("[data-composer-card]") ?? seat?.querySelector("[data-composer-card]");
+  const top = header?.getBoundingClientRect().bottom ?? 0;
+  const bottom = card?.getBoundingClientRect().top ?? window.innerHeight;
+  return { top, bottom };
+}
+
 interface FileRowProps {
   file: ChangeFile;
   /** Leaf name shown in the tree; full path stays in the title. */
   displayName?: string;
   selected: boolean;
   t: GitUiT;
-  onSelect: () => void;
+  onSelect: (event: React.MouseEvent) => void;
   actions?: Array<{ label: string; danger?: boolean; title?: string; run: () => void }>;
   /** Tree nesting depth; 0 = top level. */
   depth?: number;
@@ -473,6 +487,12 @@ export function GitPanel(props: {
   const [dirDraft, setDirDraft] = useState(dir);
   const [tab, setTab] = useState<"changes" | "files" | "merge" | "history" | "branches" | "stash" | "remotes" | "config">("changes");
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
+  /** Multi-select of changed-file paths (Ctrl/Cmd toggle, Shift range). */
+  const [selectedPaths, setSelectedPaths] = useState<string[]>([]);
+  /** Anchor path for Shift+click range selection. */
+  const [anchorPath, setAnchorPath] = useState<string | null>(null);
+  /** "Get from revision" dialog state (the target selected paths). */
+  const [getFromRevision, setGetFromRevision] = useState<{ paths: string[] } | null>(null);
   const [diffFiles, setDiffFiles] = useState<DiffFile[] | null>(null);
   const [diffLoading, setDiffLoading] = useState(false);
   const [diffError, setDiffError] = useState<string | null>(null);
@@ -642,6 +662,12 @@ export function GitPanel(props: {
     return rows;
   }, [status, collapsedDirs, t, changelists, activeChangelist]);
 
+  // File paths in display order — the range a Shift+click extends over.
+  const filePathsInOrder = useMemo(
+    () => changeRows.filter((row) => row.kind === "file").map((row) => (row.file as ChangeFile).path),
+    [changeRows]
+  );
+
   // Per-directory aggregation of the three change groups: which file paths
   // under each directory are staged / unstaged / untracked. Directory rows
   // use this to offer stage / unstage / track / untrack actions.
@@ -721,6 +747,14 @@ export function GitPanel(props: {
       (status?.unstaged ?? []).some((f) => f.path === p)
     );
     const staged = paths.some((p) => (status?.staged ?? []).some((f) => f.path === p));
+    // "Get from revision" only applies to tracked files (untracked files exist
+    // in no revision, so git checkout <rev> -- <path> would fail).
+    const allTracked =
+      paths.length > 0 &&
+      paths.every((p) =>
+        (status?.staged ?? []).some((f) => f.path === p) ||
+        (status?.unstaged ?? []).some((f) => f.path === p)
+      );
     // For a directory row, `paths` lists every changed file under it — the
     // ignore rule must target the directory itself (`dir/`), not its first
     // file, or only that one file would be ignored.
@@ -730,6 +764,9 @@ export function GitPanel(props: {
     const ignoreNotice = tracked ? t("menu.ignoredTracked") : t("menu.ignored");
     return [
       { label: t("menu.showDiff"), onClick: () => void selectFile({ path: paths[0] ?? "", status: "modified" }) },
+      ...(allTracked
+        ? [{ label: t("getFromRevision.title"), onClick: () => setGetFromRevision({ paths }) }]
+        : []),
       ...(tracked && !staged
         ? [{ label: t("menu.stage"), onClick: () => void runMutation(t("menu.stage"), () => api.stage(dir, paths)) }]
         : []),
@@ -925,16 +962,17 @@ export function GitPanel(props: {
         key={row.key}
         file={file}
         displayName={row.displayName}
-        selected={selectedPath === file.path}
+        selected={selectedPaths.includes(file.path)}
         t={t}
-        onSelect={() => selectFile(file)}
+        onSelect={(event) => selectFile(file, event)}
         actions={actions}
         depth={row.depth}
         checked={!uncheckedPaths.has(file.path)}
         onToggleChecked={() => toggleChecked(file.path)}
         onContextMenu={(event) => {
           event.preventDefault();
-          setMenu({ x: event.clientX, y: event.clientY, items: changeMenuItems([file.path], file.path) });
+          const paths = selectedPaths.includes(file.path) ? selectedPaths : [file.path];
+          setMenu({ x: event.clientX, y: event.clientY, items: changeMenuItems(paths, file.path) });
         }}
       />
     );
@@ -1326,12 +1364,33 @@ export function GitPanel(props: {
     return list;
   }, [uncheckedHunks, checkedPaths, wsFlags]);
 
-  function selectFile(file: ChangeFile): void {
-    setSelectedPath(file.path);
-    void loadDiff(file.path);
-    // Clicking a file means "start comparing": enter the maximized state by
-    // default — the same effect as the titlebar ⛶ button next to float/dock.
-    if (!fullscreen) gitUiSetFullscreen(true);
+  function selectFile(file: ChangeFile, event?: React.MouseEvent): void {
+    const path = file.path;
+    if (event !== undefined && (event.ctrlKey || event.metaKey)) {
+      // Ctrl/Cmd+click toggles membership in the multi-selection.
+      setSelectedPaths((prev) => (prev.includes(path) ? prev.filter((p) => p !== path) : [...prev, path]));
+      setAnchorPath(path);
+      setSelectedPath(path);
+      void loadDiff(path);
+    } else if (event !== undefined && event.shiftKey) {
+      // Shift+click range-selects files between the anchor and this one.
+      const anchor = anchorPath ?? path;
+      const ia = filePathsInOrder.indexOf(anchor);
+      const ib = filePathsInOrder.indexOf(path);
+      const sel = ia >= 0 && ib >= 0 ? filePathsInOrder.slice(Math.min(ia, ib), Math.max(ia, ib) + 1) : [path];
+      setSelectedPaths(sel);
+      setAnchorPath(path);
+      setSelectedPath(path);
+      void loadDiff(path);
+    } else {
+      setSelectedPaths([path]);
+      setAnchorPath(path);
+      setSelectedPath(path);
+      void loadDiff(path);
+      // Clicking a file means "start comparing": enter the maximized state by
+      // default — the same effect as the titlebar ⛶ button next to float/dock.
+      if (!fullscreen) gitUiSetFullscreen(true);
+    }
   }
 
   async function runMutation(successLabel: string, operation: () => Promise<void>): Promise<void> {
@@ -1374,7 +1433,11 @@ export function GitPanel(props: {
       baseHeight = Math.min(GIT_UI_MAX_HEIGHT, Math.max(GIT_UI_MIN_HEIGHT, window.innerHeight - 16));
       gitUiSetPanelHeight(baseHeight);
     }
-    startDrag(0, event.clientY, (_dx, dy) => gitUiSetPanelHeight(baseHeight - dy));
+    // Clamp the upward drag so the panel's top never rises above the host
+    // header/tabs bottom (it would otherwise be covered by the tabs).
+    const bounds = measureContentBounds();
+    const maxHeight = Math.max(GIT_UI_MIN_HEIGHT, Math.min(GIT_UI_MAX_HEIGHT, bounds.bottom - bounds.top));
+    startDrag(0, event.clientY, (_dx, dy) => gitUiSetPanelHeight(Math.min(baseHeight - dy, maxHeight)));
   };
 
   /** Shared clamp: keep the floating window inside the viewport. */
@@ -1752,6 +1815,19 @@ export function GitPanel(props: {
           onClose={() => setCloneOpen(false)}
         />
       )}
+      {getFromRevision !== null && (
+        <GetFromRevisionDialog
+          api={api}
+          t={t}
+          dir={dir}
+          paths={getFromRevision.paths}
+          onDone={() => {
+            setGetFromRevision(null);
+            void refresh();
+          }}
+          onClose={() => setGetFromRevision(null)}
+        />
+      )}
     </>
   );
 
@@ -1760,40 +1836,6 @@ export function GitPanel(props: {
   const fontScaleStyle: React.CSSProperties = {
     "--git-ui-font-scale": String(fontScale)
   } as unknown as React.CSSProperties;
-
-  // Maximized (fullscreen) bounds: the panel fills from below the host header
-  // so the 对话/轨迹 tabs stay visible, down to above the composer input card.
-  const [fullscreenTop, setFullscreenTop] = useState(0);
-  const [fullscreenHeight, setFullscreenHeight] = useState<number>(() => window.innerHeight);
-  useLayoutEffect(() => {
-    if (!fullscreen) return;
-    const measure = (): void => {
-      const seat = document.querySelector("[data-composer-seat]");
-      const root = seat?.parentElement?.parentElement;
-      const header = root?.querySelector(":scope > header") ?? root?.querySelector("header");
-      const card = document.querySelector("[data-composer-card]") ?? seat?.querySelector("[data-composer-card]");
-      const headerBottom = header?.getBoundingClientRect().bottom ?? 0;
-      const cardTop = card?.getBoundingClientRect().top ?? window.innerHeight;
-      // CSS 'bottom' is measured from the viewport's bottom edge, but
-      // getBoundingClientRect().top is from the top - so anchor by top + height
-      // instead of bottom, otherwise the panel collapses to ~0 height.
-      setFullscreenTop(headerBottom);
-      setFullscreenHeight(Math.max(0, cardTop - headerBottom));
-    };
-    measure();
-    window.addEventListener("resize", measure);
-    // The header (tabs) and the composer input card can grow/shrink (tabs wrap,
-    // the composer expands) — keep the maximized bounds in sync.
-    const observer = new ResizeObserver(measure);
-    const seat = document.querySelector("[data-composer-seat]");
-    const card = document.querySelector("[data-composer-card]");
-    if (seat !== null) observer.observe(seat);
-    if (card !== null) observer.observe(card);
-    return () => {
-      window.removeEventListener("resize", measure);
-      observer.disconnect();
-    };
-  }, [fullscreen]);
 
   const resizeHandle = (
     <div
@@ -2027,14 +2069,6 @@ export function GitPanel(props: {
         </button>
         <button
           type="button"
-          className={"gitui-win-btn" + (floating ? " gitui-active" : "")}
-          title={floating ? t("float.dock") : t("float.title")}
-          onClick={() => gitUiSetFloating(!floating)}
-        >
-          ⧉
-        </button>
-        <button
-          type="button"
           className={"gitui-win-btn" + (fullscreen ? " gitui-active" : "")}
           title={fullscreen ? t("win.exitFullscreen") : t("win.fullscreen")}
           onClick={() => gitUiSetFullscreen(!fullscreen)}
@@ -2097,13 +2131,13 @@ export function GitPanel(props: {
     );
   }
 
-  return (
+  const panel = (
     <div data-git-ui-root="" style={fontScaleStyle}>
       <div
         className={"gitui-panel" + (fullscreen ? " gitui-fullscreen" : "")}
         style={
           fullscreen
-            ? { position: "fixed", top: fullscreenTop, left: 0, right: 0, bottom: "auto", height: fullscreenHeight, zIndex: 2147483000 }
+            ? { position: "fixed", inset: 0, zIndex: 2147483000 }
             : { height: `${panelHeight}px` }
         }
       >
@@ -2113,6 +2147,8 @@ export function GitPanel(props: {
       </div>
     </div>
   );
+
+  return fullscreen ? createPortal(panel, document.body) : panel;
 }
 
 export { GIT_UI_MAX_HEIGHT };

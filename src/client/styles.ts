@@ -73,13 +73,12 @@ const CSS = `
 .gitui-win-btn.gitui-active { color: var(--git-ui-accent); }
 .gitui-win-close:hover { background: rgba(248, 81, 73, .85); color: #fff; }
 .gitui-fullscreen {
-  position: fixed;
+  position: fixed; inset: 0;
   z-index: 2147483000; border-radius: 0; border: none;
 }
-/* The maximized panel is anchored by inline top/bottom (below the host
-   header so the 对话/轨迹 tabs stay visible, above the composer input card),
-   so drop the fixed 420px panel height and 100vh — otherwise height would
-   fight the inset and the input bar would be hidden. */
+/* The maximized panel covers the whole viewport (portaled to <body> so it
+   beats the host tab bar's stacking context). Drop the fixed 420px panel
+   height so the box is sized by the inset. */
 .gitui-panel.gitui-fullscreen {
   height: auto; max-height: none;
 }
@@ -852,25 +851,30 @@ const CSS = `
 .gitui-mr-line-theirs { background: #ffe3c2; }
 .gitui-mr-line-result { background: #f8e0e0; }
 .gitui-mr-line-block-current { box-shadow: inset 3px 0 0 #1f6feb; }
-.gitui-mr-act {
-  position: absolute; top: 0; z-index: 2;
-  width: 22px; height: 16px; line-height: calc(15px * var(--git-ui-font-scale, 1)); padding: 0;
-  border: none; border-radius: 4px; background: transparent;
-  cursor: pointer; font-size: calc(13px * var(--git-ui-font-scale, 1)); font-weight: 700;
-  visibility: hidden;
+/* One reserved gutter slot per line for the per-block action button, so it is
+   always visible (like the diff area's fixed gutter arrow) and never overlaps
+   the line number. Empty on lines without a block action, so numbers stay
+   aligned. */
+.gitui-mr-actslot {
+  flex: none; width: 18px;
+  display: inline-flex; align-items: center; justify-content: center;
 }
-.gitui-mr-line:hover .gitui-mr-act { visibility: visible; }
-.gitui-mr-act:hover { background: rgba(0, 0, 0, .08); }
-/* Toggle buttons sit on the pane edge hugging the Result boundary, arrows
-   pointing into it: » at the LEFT pane's right edge, « at the RIGHT pane's
-   left edge (over its line-number gutter, which is the boundary side).
-   Accepted blocks flip the glyph to the opposite direction and dim,
-   meaning "click to undo". */
-.gitui-mr-act-edge-r { right: 2px; color: #1f6feb; }
-.gitui-mr-act-edge-l { left: 2px; color: #b45309; }
-.gitui-mr-act-done { opacity: .55; }
-/* × removes from the Result: stays on the line-number gutter. */
-.gitui-mr-act-remove { left: 2px; color: #cf222e; }
+.gitui-mr-act {
+  width: 16px; height: 16px; padding: 0;
+  border: none; border-radius: 4px; background: transparent;
+  cursor: pointer; font-size: calc(12px * var(--git-ui-font-scale, 1)); font-weight: 700;
+  line-height: 1; display: inline-flex; align-items: center; justify-content: center;
+  opacity: .55;
+}
+.gitui-mr-act:hover { background: rgba(0, 0, 0, .1); opacity: 1; }
+/* Apply buttons: left/ours blue, right/theirs orange. The glyph's direction
+   points into the Result column (», «). Applied blocks dim and flip the glyph
+   to the opposite direction, meaning "click to undo". */
+.gitui-mr-act-accept-ours { color: #1f6feb; }
+.gitui-mr-act-accept-theirs { color: #b45309; }
+.gitui-mr-act-done { opacity: .4; }
+/* × = not apply: remove the block from the Result. */
+.gitui-mr-act-remove { color: #cf222e; }
 .gitui-mr-edit {
   flex: 1; min-height: 0; width: 100%; resize: none;
   background: transparent; color: var(--git-ui-text);

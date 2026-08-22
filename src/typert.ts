@@ -67,7 +67,8 @@ export const TYPERT = {
           { kind: "method", name: "rebaseStart", signature: "async rebaseStart(request: GitRebaseStartRequest): Promise<GitRebaseStartResult>" },
           { kind: "method", name: "operationSkip", signature: "async operationSkip(request: GitOperationSkipRequest): Promise<GitOperationSkipResult>" },
           { kind: "method", name: "logAuthors", signature: "async logAuthors(request: GitLogAuthorsRequest): Promise<GitLogAuthorsResult>" },
-          { kind: "method", name: "diffWithWorktree", signature: "async diffWithWorktree(request: GitDiffWithWorktreeRequest): Promise<GitDiffWithWorktreeResult>" }
+          { kind: "method", name: "diffWithWorktree", signature: "async diffWithWorktree(request: GitDiffWithWorktreeRequest): Promise<GitDiffWithWorktreeResult>" },
+          { kind: "method", name: "getFromRevision", signature: "async getFromRevision(request: GitGetFromRevisionRequest): Promise<GitGetFromRevisionResult>" }
         ],
         types: [
           { name: "GitStatusRequest", declaration: "export interface GitStatusRequest { readonly dir: string; }" },
@@ -85,6 +86,8 @@ export const TYPERT = {
           { name: "GitRevertChangesResult", declaration: "export type GitRevertChangesResult = GitResult<{ reverted: number }>;" },
           { name: "GitPathsRequest", declaration: "export interface GitPathsRequest { readonly dir: string; readonly paths: string[]; }" },
           { name: "GitPathsResult", declaration: "export type GitPathsResult = GitResult<{ paths: string[] }>;" },
+          { name: "GitGetFromRevisionRequest", declaration: "export interface GitGetFromRevisionRequest { readonly dir: string; readonly paths: string[]; readonly revision: string; }" },
+          { name: "GitGetFromRevisionResult", declaration: "export type GitGetFromRevisionResult = GitResult<{ paths: string[] }>;" },
           { name: "GitCommitRequest", declaration: "export interface GitCommitRequest { readonly dir: string; readonly message: string; readonly amend?: boolean; readonly paths?: string[]; readonly partial?: Array<{ readonly path: string; readonly hunks: number[]; readonly wsFlags?: WsFlags }>; }" },
           { name: "GitCommitResult", declaration: "export type GitCommitResult = GitResult<{ hash: string; short: string; amended: boolean }>;" },
           { name: "GitBranchesRequest", declaration: "export interface GitBranchesRequest { readonly dir: string; }" },

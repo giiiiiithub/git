@@ -835,24 +835,6 @@ export function HistoryView(props: {
           >
             🔀
           </button>
-          <button
-            type="button"
-            className="gitui-btn"
-            title={t("action.refresh")}
-            onClick={() => {
-              setRows(null);
-              void refreshRows();
-            }}
-          >
-            {t("action.refresh")}
-          </button>
-          <input
-            className="gitui-dir"
-            value={query}
-            placeholder={t("history.search")}
-            spellCheck={false}
-            onChange={(event) => setQuery(event.target.value)}
-          />
           <select
             className="gitui-dir"
             value={branchFilter}
@@ -902,6 +884,13 @@ export function HistoryView(props: {
           />
           <input
             className="gitui-dir"
+            value={query}
+            placeholder={t("history.search")}
+            spellCheck={false}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+          <input
+            className="gitui-dir"
             value={filePathInput}
             placeholder={t("history.fileFilter")}
             spellCheck={false}
@@ -915,6 +904,18 @@ export function HistoryView(props: {
               ✕ {t("history.fileFilterClear")}
             </button>
           )}
+          <button
+            type="button"
+            className="gitui-btn"
+            style={{ marginLeft: "auto" }}
+            title={t("action.refresh")}
+            onClick={() => {
+              setRows(null);
+              void refreshRows();
+            }}
+          >
+            {t("action.refresh")}
+          </button>
         </div>
         <div className="gitui-history-layout">
           <div

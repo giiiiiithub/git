@@ -150,11 +150,8 @@ function initialDir(): string {
 }
 
 function initialFloating(): boolean {
-  try {
-    return localStorage.getItem(FLOAT_KEY) === "1";
-  } catch {
-    return false;
-  }
+  // Floating-window mode was removed; the panel always starts docked.
+  return false;
 }
 
 function readSplits(): Record<GitUiSplitTab, number> {

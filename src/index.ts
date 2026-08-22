@@ -1117,6 +1117,17 @@ export default class GitService extends TypertRemoteService {
     return this.pathsMutation(["rm", "-r", "--cached", "--"], request, "untrack");
   }
 
+  /** Checkout the selected file(s) at a given revision ("get from revision").
+   *  Updates both the index and the worktree to that revision's content. */
+  async getFromRevision(request: { dir: string; paths: string[]; revision: string }): Promise<GitResult<{ paths: string[] }>> {
+    const cwd = resolve(request.dir);
+    const run = await this.cli.run(["checkout", request.revision, "--", ...request.paths], { cwd });
+    if (run.code !== 0) {
+      return { ok: false, error: fail("git-error", withGitDetail("从版本获取失败", run.stderr)) };
+    }
+    return { ok: true, value: { paths: request.paths } };
+  }
+
   private async pathsMutation(
     prefix: string[],
     request: { dir: string; paths: string[] },

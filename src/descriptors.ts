@@ -65,6 +65,7 @@ export const DESCRIPTORS: Descriptor[] = [
   def("unstage", S.pathsRequestSchema, "GitPathsRequest", S.pathsResultSchema, "GitPathsResult"),
   def("discard", S.pathsRequestSchema, "GitPathsRequest", S.pathsResultSchema, "GitPathsResult"),
   def("untrack", S.pathsRequestSchema, "GitPathsRequest", S.pathsResultSchema, "GitPathsResult"),
+  def("getFromRevision", S.getFromRevisionRequestSchema, "GitGetFromRevisionRequest", S.getFromRevisionResultSchema, "GitGetFromRevisionResult"),
   def("commit", S.commitRequestSchema, "GitCommitRequest", S.commitResultSchema, "GitCommitResult"),
   def("branches", S.branchesRequestSchema, "GitBranchesRequest", S.branchesResultSchema, "GitBranchesResult"),
   def("branchRename", S.branchRenameRequestSchema, "GitBranchRenameRequest", S.branchRenameResultSchema, "GitBranchRenameResult"),

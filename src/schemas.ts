@@ -241,6 +241,13 @@ export const pathsResultSchema = resultSchema(
   z.object({ paths: z.array(z.string()) })
 );
 
+/** Checkout the selected file(s) at a given revision into the worktree+index. */
+export const getFromRevisionRequestSchema = dirRequestSchema.extend({
+  paths: z.array(z.string().min(1)).min(1),
+  revision: z.string().min(1)
+});
+export const getFromRevisionResultSchema = pathsResultSchema;
+
 // ── commit ──────────────────────────────────────────────────────────────────
 
 export const commitRequestSchema = dirRequestSchema.extend({

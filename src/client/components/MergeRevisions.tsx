@@ -83,21 +83,23 @@ function LineList(props: {
             }
             onClick={onLineClick !== undefined ? () => onLineClick(i) : undefined}
           >
+            <span className="gitui-mr-actslot">
+              {actions.map((action, ai) => (
+                <button
+                  key={ai}
+                  type="button"
+                  className={"gitui-mr-act " + action.cls}
+                  title={action.title}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    action.onClick();
+                  }}
+                >
+                  {action.glyph}
+                </button>
+              ))}
+            </span>
             <span className="gitui-mr-no">{i + 1}</span>
-            {actions.map((action, ai) => (
-              <button
-                key={ai}
-                type="button"
-                className={"gitui-mr-act " + action.cls}
-                title={action.title}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  action.onClick();
-                }}
-              >
-                {action.glyph}
-              </button>
-            ))}
             <span className="gitui-mr-text" title={line}>{line === "" ? " " : line}</span>
           </div>
         );
@@ -347,11 +349,12 @@ export function MergeRevisions(props: {
                 const done = applied[j] !== undefined;
                 return [
                   {
-                    // Single toggle at the boundary: » = accept, « = undo.
+                    // Apply the left/ours side into the Result; once applied,
+                    // clicking again restores the original conflict block.
                     glyph: done ? "«" : "»",
-                    title: done ? t("merge.restore") : t("merge.acceptLeftHint"),
+                    title: done ? t("merge.restore") : t("merge.applyLeft"),
                     cls:
-                      "gitui-mr-act-accept-ours gitui-mr-act-edge-r" +
+                      "gitui-mr-act-accept-ours" +
                       (done ? " gitui-mr-act-done" : ""),
                     onClick: () =>
                       done ? restoreBlock(j, applied[j] as "ours" | "theirs") : applySideByContent(j, "ours")
@@ -376,7 +379,7 @@ export function MergeRevisions(props: {
                   ? [
                       {
                         glyph: "×",
-                        title: t("merge.removeBlock"),
+                        title: t("merge.notApply"),
                         cls: "gitui-mr-act-remove",
                         onClick: () => removeBlock(idx)
                       }
@@ -397,11 +400,12 @@ export function MergeRevisions(props: {
                 const done = applied[j] !== undefined;
                 return [
                   {
-                    // Single toggle at the boundary: « = accept, » = undo.
+                    // Apply the right/theirs side into the Result; once applied,
+                    // clicking again restores the original conflict block.
                     glyph: done ? "»" : "«",
-                    title: done ? t("merge.restore") : t("merge.acceptRightHint"),
+                    title: done ? t("merge.restore") : t("merge.applyRight"),
                     cls:
-                      "gitui-mr-act-accept-theirs gitui-mr-act-edge-l" +
+                      "gitui-mr-act-accept-theirs" +
                       (done ? " gitui-mr-act-done" : ""),
                     onClick: () =>
                       done ? restoreBlock(j, applied[j] as "ours" | "theirs") : applySideByContent(j, "theirs")

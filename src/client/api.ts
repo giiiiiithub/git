@@ -83,6 +83,7 @@ type Namespace = {
   unstage(request: { dir: string; paths: string[] }): Promise<GitResult<{ paths: string[] }>>;
   discard(request: { dir: string; paths: string[]; staged?: boolean }): Promise<GitResult<{ paths: string[] }>>;
   untrack(request: { dir: string; paths: string[] }): Promise<GitResult<{ paths: string[] }>>;
+  getFromRevision(request: { dir: string; paths: string[]; revision: string }): Promise<GitResult<{ paths: string[] }>>;
   listDir(request: { dir: string; path?: string }): Promise<GitResult<{ entries: DirEntry[] }>>;
   readFile(request: { dir: string; path: string }): Promise<GitResult<FileContent>>;
   binaryContent(request: {
@@ -277,6 +278,10 @@ export class GitApi {
 
   async untrack(dir: string, paths: string[]): Promise<void> {
     await this.call("untrack", { dir, paths });
+  }
+
+  async getFromRevision(dir: string, paths: string[], revision: string): Promise<void> {
+    await this.call("getFromRevision", { dir, paths, revision });
   }
 
   async listDir(dir: string, path?: string): Promise<DirEntry[]> {

@@ -38,7 +38,7 @@ export default defineConfig([
       // zod is inlined so the browser module table needs no extra row;
       // react stays external (resolved by the host page).
       onlyBundle: [/^zod$/],
-      neverBundle: [/^react($|\/)/]
+      neverBundle: [/^react($|\/)/, /^react-dom($|\/)/]
     },
     // ensure the CSS-module machinery never kicks in: we inject styles by hand
     cssModules: false
