@@ -1157,6 +1157,28 @@ const CSS = `
 }
 .gitui-header-btn:hover { border-color: var(--git-ui-accent); color: var(--git-ui-accent); }
 .gitui-header-btn.gitui-active { border-color: var(--git-ui-accent); color: var(--git-ui-accent); background: rgba(77, 159, 255, .1); }
+
+/* sidebar foot action (sidebar.footer.action): icon-only in the 56px rail,
+   icon + label + badge when wide. Lives OUTSIDE [data-git-ui-root], so the
+   theme vars are re-declared like the header button above. */
+.gitui-sidebar-btn {
+  --git-ui-border: var(--dsw-alias-border-l2, rgba(128,128,128,.25));
+  --git-ui-text: var(--dsw-alias-label-secondary, inherit);
+  --git-ui-accent: var(--dsw-alias-brand-primary, #4d9fff);
+  position: relative;
+  color: var(--git-ui-text);
+  background: transparent; border: none; border-radius: 8px;
+  padding: 6px; cursor: pointer;
+  min-height: 28px;
+}
+.gitui-sidebar-btn:hover { color: var(--git-ui-accent); background: rgba(77, 159, 255, .08); }
+.gitui-sidebar-btn.gitui-active { color: var(--git-ui-accent); background: rgba(77, 159, 255, .12); }
+.gitui-sidebar-btn .gitui-badge {
+  position: absolute; top: -1px; right: -1px;
+  min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px;
+  font-size: calc(10px * var(--git-ui-font-scale, 1));
+  line-height: calc(16px * var(--git-ui-font-scale, 1));
+}
 `;
 
 export function ensureStyles(): void {

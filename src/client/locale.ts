@@ -6,6 +6,7 @@ export interface LocaleDict {
 
 export const zh: LocaleDict = {
   "panel.title": "Git",
+  "sidebar.trigger": "Git 面板",
   "panel.fontScaleSmaller": "减小整体字号",
   "panel.fontScaleLarger": "增大整体字号",
   "action.refresh": "刷新",
@@ -442,6 +443,7 @@ export const zh: LocaleDict = {
 
 export const en: LocaleDict = {
   "panel.title": "Git",
+  "sidebar.trigger": "Git panel",
   "panel.fontScaleSmaller": "Decrease overall font size",
   "panel.fontScaleLarger": "Increase overall font size",
   "action.refresh": "Refresh",

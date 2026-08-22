@@ -6,6 +6,7 @@
 import { GitApi, GitApiError } from "./api.js";
 import { ensureStyles } from "./styles.js";
 import { GitHeaderAction } from "./components/GitHeaderAction.js";
+import { GitSidebarAction } from "./components/GitSidebarAction.js";
 import { GitPanel } from "./components/GitPanel.js";
 import { zh, en } from "./locale.js";
 import { TYPERT_REMOTE } from "../remote.js";
@@ -69,6 +70,22 @@ export async function apply(ctx: {
   ctx.effect(
     () => ctx.locale.register(NS, { zh, en }),
     "git-ui: dictionaries"
+  );
+
+  // Left-sidebar foot entry (root scope — always visible, no session
+  // needed): toggles the same store as the header action, so the panel
+  // still opens in the conversation dock exactly as before.
+  ctx.slots.inject("sidebar.footer.action", () =>
+    ctx.slots.register(
+      {
+        name: "sidebar.footer.action",
+        id: "git-ui-sidebar",
+        order: 30,
+        locale: NS,
+        inject: () => ({ api })
+      },
+      GitSidebarAction
+    )
   );
 
   ctx.slots.inject("conversation.session.header.actions", () =>
