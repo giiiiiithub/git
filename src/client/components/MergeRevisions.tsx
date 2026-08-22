@@ -66,13 +66,30 @@ function LineList(props: {
   actionsAt: (index: number) => Array<{ glyph: string; title: string; cls: string; onClick: () => void }>;
   currentAt: (index: number) => boolean;
   onLineClick?: (index: number) => void;
+  /** Where the per-block action button(s) sit: before the line number (left)
+   *  or after the content (right, hugging the Result boundary). */
+  slotSide?: "left" | "right";
 }): JSX.Element {
-  const { lines, highlight, actionsAt, currentAt, onLineClick } = props;
+  const { lines, highlight, actionsAt, currentAt, onLineClick, slotSide = "left" } = props;
   return (
     <div className="gitui-mr-lines">
       {lines.map((line, i) => {
         const cls = highlight(i);
         const actions = actionsAt(i);
+        const buttons = actions.map((action, ai) => (
+          <button
+            key={ai}
+            type="button"
+            className={"gitui-mr-act " + action.cls}
+            title={action.title}
+            onClick={(event) => {
+              event.stopPropagation();
+              action.onClick();
+            }}
+          >
+            {action.glyph}
+          </button>
+        ));
         return (
           <div
             key={i}
@@ -83,24 +100,10 @@ function LineList(props: {
             }
             onClick={onLineClick !== undefined ? () => onLineClick(i) : undefined}
           >
-            <span className="gitui-mr-actslot">
-              {actions.map((action, ai) => (
-                <button
-                  key={ai}
-                  type="button"
-                  className={"gitui-mr-act " + action.cls}
-                  title={action.title}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    action.onClick();
-                  }}
-                >
-                  {action.glyph}
-                </button>
-              ))}
-            </span>
+            {slotSide === "left" && <span className="gitui-mr-actslot">{buttons}</span>}
             <span className="gitui-mr-no">{i + 1}</span>
             <span className="gitui-mr-text" title={line}>{line === "" ? " " : line}</span>
+            {slotSide === "right" && <span className="gitui-mr-actslot gitui-mr-actslot-r">{buttons}</span>}
           </div>
         );
       })}
@@ -275,6 +278,16 @@ export function MergeRevisions(props: {
     else if (blocks.length > 0) applyBlock(0, side);
   }
 
+  /** Not-apply: locate the pristine block in the live result and remove it. */
+  function removeByContent(index: number): void {
+    const initial = initialBlocks[index];
+    if (initial === undefined) return;
+    const idx = blocks.findIndex(
+      (b) => joinLines(b.ours) === joinLines(initial.ours) && joinLines(b.theirs) === joinLines(initial.theirs)
+    );
+    if (idx >= 0) removeBlock(idx);
+  }
+
   async function save(): Promise<void> {
     setBusy(true);
     setError(null);
@@ -343,6 +356,7 @@ export function MergeRevisions(props: {
               lines={oursLines}
               highlight={(i) => (inOursBlock(i) ? "ours" : null)}
               currentAt={() => false}
+              slotSide="right"
               actionsAt={(i) => {
                 const j = view.blocks.findIndex((b) => b.oursEnd >= b.oursStart && i === b.oursStart);
                 if (j < 0) return [];
@@ -358,6 +372,13 @@ export function MergeRevisions(props: {
                       (done ? " gitui-mr-act-done" : ""),
                     onClick: () =>
                       done ? restoreBlock(j, applied[j] as "ours" | "theirs") : applySideByContent(j, "ours")
+                  },
+                  {
+                    // Not apply: remove this block from the Result.
+                    glyph: "×",
+                    title: t("merge.notApply"),
+                    cls: "gitui-mr-act-remove",
+                    onClick: () => removeByContent(j)
                   }
                 ];
               }}
@@ -373,19 +394,8 @@ export function MergeRevisions(props: {
                 const idx = blocks.findIndex((b) => i >= b.start && i <= b.end);
                 if (idx >= 0) setCurrent(idx);
               }}
-              actionsAt={(i) => {
-                const idx = blocks.findIndex((b) => b.start === i);
-                return idx >= 0
-                  ? [
-                      {
-                        glyph: "×",
-                        title: t("merge.notApply"),
-                        cls: "gitui-mr-act-remove",
-                        onClick: () => removeBlock(idx)
-                      }
-                    ]
-                  : [];
-              }}
+              slotSide="left"
+              actionsAt={() => []}
             />
           </div>
           <div className="gitui-mr-col">
@@ -394,6 +404,7 @@ export function MergeRevisions(props: {
               lines={theirsLines}
               highlight={(i) => (inTheirsBlock(i) ? "theirs" : null)}
               currentAt={() => false}
+              slotSide="left"
               actionsAt={(i) => {
                 const j = view.blocks.findIndex((b) => b.theirsEnd >= b.theirsStart && i === b.theirsStart);
                 if (j < 0) return [];

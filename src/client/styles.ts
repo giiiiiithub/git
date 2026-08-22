@@ -342,7 +342,10 @@ const CSS = `
   overflow: hidden;
 }
 .gitui-file:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,.12)); }
-.gitui-file-selected { background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,.18)); }
+/* Multi-select highlight: a blue tint like the log list; the primary
+   (diff-target) row is stronger with an accent inset bar. */
+.gitui-file-selected { background: rgba(77, 159, 255, .12); }
+.gitui-file-selected.gitui-file-primary { background: rgba(77, 159, 255, .20); box-shadow: inset 2px 0 0 var(--git-ui-accent, #4d9fff); }
 .gitui-file-path { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: calc(12px * var(--git-ui-font-scale, 1)); }
 .gitui-check { margin: 0; flex: none; width: 13px; height: 13px; accent-color: var(--git-ui-accent); cursor: pointer; }
 .gitui-config-key { flex: none; min-width: 180px; color: var(--git-ui-accent); }
@@ -859,8 +862,14 @@ const CSS = `
   flex: none; width: 18px;
   display: inline-flex; align-items: center; justify-content: center;
 }
+/* Right-side slot (ours pane): sits after the content, hugging the Result
+   boundary, holding the apply + not-apply pair side by side. */
+.gitui-mr-actslot-r {
+  width: auto; margin-left: 2px; gap: 2px;
+  display: inline-flex; align-items: center; justify-content: flex-end;
+}
 .gitui-mr-act {
-  width: 16px; height: 16px; padding: 0;
+  width: 18px; height: 16px; padding: 0;
   border: none; border-radius: 4px; background: transparent;
   cursor: pointer; font-size: calc(12px * var(--git-ui-font-scale, 1)); font-weight: 700;
   line-height: 1; display: inline-flex; align-items: center; justify-content: center;

@@ -104,6 +104,8 @@ interface FileRowProps {
   /** Leaf name shown in the tree; full path stays in the title. */
   displayName?: string;
   selected: boolean;
+  /** True when this row is the primary (last-clicked) selection — the diff target. */
+  primary?: boolean;
   t: GitUiT;
   onSelect: (event: React.MouseEvent) => void;
   actions?: Array<{ label: string; danger?: boolean; title?: string; run: () => void }>;
@@ -116,10 +118,10 @@ interface FileRowProps {
 }
 
 function FileRow(props: FileRowProps): JSX.Element {
-  const { file, selected, t, onSelect, actions, displayName, depth = 0, checked, onToggleChecked, onContextMenu } = props;
+  const { file, selected, primary = false, t, onSelect, actions, displayName, depth = 0, checked, onToggleChecked, onContextMenu } = props;
   return (
     <div
-      className={"gitui-file" + (selected ? " gitui-file-selected" : "")}
+      className={"gitui-file" + (selected ? " gitui-file-selected" : "") + (primary ? " gitui-file-primary" : "")}
       onClick={onSelect}
       onContextMenu={onContextMenu}
       title={file.path}
@@ -963,6 +965,7 @@ export function GitPanel(props: {
         file={file}
         displayName={row.displayName}
         selected={selectedPaths.includes(file.path)}
+        primary={selectedPath === file.path}
         t={t}
         onSelect={(event) => selectFile(file, event)}
         actions={actions}
