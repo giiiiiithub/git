@@ -1037,7 +1037,10 @@ const CSS = `
   border-radius: 6px; font-size: calc(12px * var(--git-ui-font-scale, 1));
 }
 .gitui-changed-file:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,.12)); }
-.gitui-changed-file-selected { background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,.2)); }
+/* Multi-select highlight: blue tint like the log list; primary (diff-target)
+   is stronger with an accent inset bar. */
+.gitui-changed-file-selected { background: rgba(77, 159, 255, .12); }
+.gitui-changed-file-selected.gitui-changed-file-primary { background: rgba(77, 159, 255, .20); box-shadow: inset 2px 0 0 var(--git-ui-accent, #4d9fff); }
 .gitui-numstat { margin-left: auto; flex: none; display: flex; gap: 6px; font-size: calc(11px * var(--git-ui-font-scale, 1)); font-family: ui-monospace, Consolas, monospace; }
 .gitui-num-add { color: var(--dsw-alias-state-success-primary, #3fb950); }
 .gitui-num-del { color: var(--dsw-alias-state-error-primary, #f85149); }

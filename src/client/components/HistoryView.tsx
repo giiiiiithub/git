@@ -90,6 +90,14 @@ function CommitDetailPanel(props: {
   const [worktreeMode, setWorktreeMode] = useState(false);
   /** Files of the worktree diff (all paths when worktreeMode). */
   const [worktreeFiles, setWorktreeFiles] = useState<Array<{ path: string }>>([]);
+  /** Multi-select of changed-file paths (Ctrl/Cmd toggle, Shift range). */
+  const [selectedPaths, setSelectedPaths] = useState<string[]>([]);
+  /** Anchor for Shift+click range selection. */
+  const [anchorPath, setAnchorPath] = useState<string | null>(null);
+  /** Context menu on the changed-file list. */
+  const [fileMenu, setFileMenu] = useState<{ x: number; y: number; paths: string[] } | null>(null);
+  /** Busy while a "get from revision" runs. */
+  const [busy, setBusy] = useState(false);
 
   const [fileLimit, setFileLimit] = useState(200);
   const FILE_PAGE = 200;
@@ -100,6 +108,9 @@ function CommitDetailPanel(props: {
     setError(null);
     setFilePath(null);
     setDiffFiles(null);
+    setSelectedPaths([]);
+    setAnchorPath(null);
+    setFileMenu(null);
     setWorktreeMode(false);
     setWorktreeFiles([]);
     setFileLimit(200);
@@ -112,6 +123,7 @@ function CommitDetailPanel(props: {
         if (value.files.length > 0) {
           const first = value.files[0];
           setFilePath(first.path);
+          setSelectedPaths([first.path]);
           setDiffLoading(true);
           api
             .commitDiff(dir, hash, first.path)
@@ -169,6 +181,7 @@ function CommitDetailPanel(props: {
           const first = files[0];
           if (first !== undefined) {
             setFilePath(first.path);
+            setSelectedPaths([first.path]);
             return api.diffWithWorktree(dir, hash, first.path).then((one) => setDiffFiles(one));
           }
           setDiffFiles([]);
@@ -235,6 +248,50 @@ function CommitDetailPanel(props: {
   }
 
   const fileList = worktreeMode ? worktreeFiles : detail.files.map((f) => ({ path: f.path, status: f.status }));
+  const fileOrder = fileList.map((f) => f.path);
+
+  // Multi-select handler for the changed-file list (Ctrl/Cmd toggle, Shift
+  // range); the primary (last-clicked) file drives the diff.
+  function selectFile(path: string, event?: React.MouseEvent): void {
+    if (event !== undefined && (event.ctrlKey || event.metaKey)) {
+      setSelectedPaths((prev) => (prev.includes(path) ? prev.filter((p) => p !== path) : [...prev, path]));
+      setAnchorPath(path);
+      openFile(path);
+    } else if (event !== undefined && event.shiftKey) {
+      const anchor = anchorPath ?? path;
+      const ia = fileOrder.indexOf(anchor);
+      const ib = fileOrder.indexOf(path);
+      const sel = ia >= 0 && ib >= 0 ? fileOrder.slice(Math.min(ia, ib), Math.max(ia, ib) + 1) : [path];
+      setSelectedPaths(sel);
+      setAnchorPath(path);
+      openFile(path);
+    } else {
+      setSelectedPaths([path]);
+      setAnchorPath(path);
+      openFile(path);
+    }
+  }
+
+  /** Checkout the selected file(s) at this commit's revision into the worktree. */
+  function doGetFromRevision(paths: string[]): void {
+    if (paths.length === 0 || busy) return;
+    if (!window.confirm(t("getFromRevision.confirm", { rev: detail?.short ?? hash }))) return;
+    setBusy(true);
+    setError(null);
+    void api.getFromRevision(dir, paths, hash)
+      .then(() => onChanged())
+      .catch((caught) => setError((caught as Error).message))
+      .finally(() => setBusy(false));
+  }
+
+  /** Context menu for the changed-file list (acts on the whole selection). */
+  function changedFileMenuItems(paths: string[]): MenuItem[] {
+    return [
+      { label: t("menu.showDiff"), onClick: () => openFile(paths[0] ?? "") },
+      { label: t("getFromRevision.title"), onClick: () => doGetFromRevision(paths) },
+      { label: t("menu.copyPath"), onClick: () => { void navigator.clipboard?.writeText(paths.join("\\n")).catch(() => {}); } }
+    ];
+  }
 
   /** The diff pane shared by the inline row and the fullscreen mode. */
   const diffPane = (
@@ -276,8 +333,13 @@ function CommitDetailPanel(props: {
             {fileList.slice(0, fileLimit).map((file) => (
               <div
                 key={file.path}
-                className={"gitui-changed-file" + (file.path === filePath ? " gitui-changed-file-selected" : "")}
-                onClick={() => openFile(file.path)}
+                className={"gitui-changed-file" + (selectedPaths.includes(file.path) ? " gitui-changed-file-selected" : "") + (filePath === file.path ? " gitui-changed-file-primary" : "")}
+                onClick={(event) => selectFile(file.path, event)}
+                onContextMenu={(event) => {
+                  event.preventDefault();
+                  const paths = selectedPaths.includes(file.path) ? selectedPaths : [file.path];
+                  setFileMenu({ x: event.clientX, y: event.clientY, paths });
+                }}
               >
                 {!worktreeMode && (
                   <span className={"gitui-file-status " + ((file as { status?: string }).status === "D" ? "gitui-st-deleted" : (file as { status?: string }).status === "A" ? "gitui-st-added" : (file as { status?: string }).status === "M" ? "gitui-st-modified" : "")}>
@@ -304,6 +366,9 @@ function CommitDetailPanel(props: {
       </div>
       )}
       {diffFullscreen && diffPane}
+      {fileMenu !== null && (
+        <Menu x={fileMenu.x} y={fileMenu.y} items={changedFileMenuItems(fileMenu.paths)} onClose={() => setFileMenu(null)} />
+      )}
     </div>
   );
 }
