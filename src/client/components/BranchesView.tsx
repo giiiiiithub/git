@@ -430,8 +430,7 @@ export function BranchesView(props: {
           {t("action.refresh")}
         </button>
       </div>
-      <Toast message={notice} />
-      {error !== null && <div className="gitui-error" style={{ padding: "6px 12px 0" }}>{error}</div>}
+      <Toast message={error !== null ? error : notice} tone={error !== null ? "error" : "ok"} />
       <div className="gitui-branches-scroll">
         {branches === null && <div className="gitui-diff-placeholder">…</div>}
         {branches !== null && local.length === 0 && (

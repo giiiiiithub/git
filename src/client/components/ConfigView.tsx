@@ -362,8 +362,7 @@ export function ConfigView(props: {
           </>
         )}
       </div>
-      {error !== null && <div className="gitui-error" style={{ padding: "6px 12px 0" }}>{error}</div>}
-      <Toast message={ok} />
+      <Toast message={error !== null ? error : ok} tone={error !== null ? "error" : "ok"} />
     </div>
   );
 }

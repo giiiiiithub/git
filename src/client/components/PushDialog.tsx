@@ -130,8 +130,7 @@ export function PushDialog(props: {
                 </div>
               ))}
           </div>
-          {error !== null && <div className="gitui-error" style={{ padding: "4px 10px" }}>{error}</div>}
-          <Toast message={ok} />
+          <Toast message={error !== null ? error : ok} tone={error !== null ? "error" : "ok"} />
         </div>
       </div>
     </div>

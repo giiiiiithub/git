@@ -1403,11 +1403,21 @@ export function DiffView(props: {
           </button>
         </div>
       )}
-      <Toast message={savedFlash ? t("diff.saved") : restoredFlash ? t("diff.restored") : null} />
+      <Toast
+        message={
+          opError !== null
+            ? opError
+            : savedFlash
+              ? t("diff.saved")
+              : restoredFlash
+                ? t("diff.restored")
+                : null
+        }
+        tone={opError !== null ? "error" : "ok"}
+      />
       {editBlocked !== null && (
         <div className="gitui-tree-warn" style={{ padding: "2px 10px 6px" }}>{editBlocked}</div>
       )}
-      {opError !== null && <div className="gitui-error" style={{ padding: "2px 10px 6px" }}>{opError}</div>}
     </div>
   );
 }
@@ -1647,8 +1657,7 @@ export function CommitBox(props: {
           </div>
         </>
       )}
-      {error !== null && <div className="gitui-error">{error}</div>}
-      <Toast message={ok} />
+      <Toast message={error !== null ? error : ok} tone={error !== null ? "error" : "ok"} />
     </div>
   );
 }

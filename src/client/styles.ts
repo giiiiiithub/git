@@ -73,13 +73,15 @@ const CSS = `
 .gitui-win-btn.gitui-active { color: var(--git-ui-accent); }
 .gitui-win-close:hover { background: rgba(248, 81, 73, .85); color: #fff; }
 .gitui-fullscreen {
-  position: fixed; inset: 0; width: 100vw; height: 100vh;
+  position: fixed;
   z-index: 2147483000; border-radius: 0; border: none;
 }
-/* Compound selector: must beat .gitui-panel's later height rule (equal
-   specificity would keep the docked height and break true fullscreen). */
+/* The maximized panel is anchored by inline top/bottom (below the host
+   header so the 对话/轨迹 tabs stay visible, above the composer input card),
+   so drop the fixed 420px panel height and 100vh — otherwise height would
+   fight the inset and the input bar would be hidden. */
 .gitui-panel.gitui-fullscreen {
-  height: 100vh; max-height: 100vh;
+  height: auto; max-height: none;
 }
 .gitui-badge {
   min-width: 18px; height: 18px; padding: 0 5px;
@@ -747,6 +749,7 @@ const CSS = `
   transition: opacity .24s ease;
   animation: gitui-toast-in .18s ease-out;
 }
+.gitui-toast-error { color: var(--dsw-alias-state-error-primary, #f85149); }
 .gitui-toast-leave { opacity: 0; }
 @keyframes gitui-toast-in {
   from { opacity: 0; transform: translateX(-50%) translateY(6px); }
@@ -934,6 +937,8 @@ const CSS = `
 .gitui-log-row {
   display: flex; gap: 8px; align-items: center; padding: 4px 10px; cursor: pointer;
   border-left: 2px solid transparent; min-height: 26px;
+  /* Shift+click range selection must not trigger native text selection. */
+  user-select: none; -webkit-user-select: none;
 }
 /* Single-line rows keep the graph verticals aligned across commits. */
 .gitui-log-row .gitui-commit-subject,
@@ -971,9 +976,13 @@ const CSS = `
 .gitui-hover-file .gitui-hover-num { flex: none; color: var(--git-ui-text-dim); }
 .gitui-hover-more { color: var(--git-ui-text-dim); }
 .gitui-log-row:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,.12)); }
-.gitui-log-row-selected { background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,.2)); border-left-color: var(--git-ui-accent); }
-/* Ctrl/Shift multi-selection: accent tint for non-primary rows. */
+/* Selected rows (click / Ctrl / Shift): light accent blue; the primary row
+   keeps the accent left border. Hover must not revert a selected row to gray. */
+.gitui-log-row-selected { background: rgba(77, 159, 255, .10); border-left-color: var(--git-ui-accent); }
+.gitui-log-row-selected:hover { background: rgba(77, 159, 255, .16); }
+/* Ctrl/Shift multi-selection: same light blue tint for non-primary rows. */
 .gitui-log-row-multi:not(.gitui-log-row-selected) { background: rgba(77, 159, 255, .10); }
+.gitui-log-row-multi:not(.gitui-log-row-selected):hover { background: rgba(77, 159, 255, .14); }
 .gitui-log-row .gitui-commit-subject { font-size: calc(12px * var(--git-ui-font-scale, 1)); }
 .gitui-history-detail {
   flex: 1; min-width: 0;

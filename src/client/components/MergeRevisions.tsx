@@ -413,8 +413,7 @@ export function MergeRevisions(props: {
         </div>
       )}
       <div className="gitui-mr-footer">
-        {error !== null && <span className="gitui-error" style={{ padding: 0 }}>{error}</span>}
-        <Toast message={saved} />
+        <Toast message={saved !== null ? saved : error} tone={error !== null ? "error" : "ok"} />
         <span style={{ flex: 1 }} />
         <button type="button" className="gitui-btn gitui-btn-primary" disabled={busy} onClick={() => void save()}>
           {t("conflict.save")}

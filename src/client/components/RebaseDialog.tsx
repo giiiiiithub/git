@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { GitApi } from "../api.js";
 import type { CommitInfo, RebaseItem } from "../../types.js";
 import type { GitUiT } from "./DiffView.js";
+import { Toast } from "./Toast.js";
 
 const ACTIONS: Array<{ value: RebaseItem["action"]; labelKey: string }> = [
   { value: "pick", labelKey: "rebase.pick" },
@@ -127,7 +128,7 @@ export function RebaseDialog(props: {
               {t("rebase.start")}
             </button>
           </div>
-          {error !== null && <div className="gitui-error" style={{ padding: "4px 10px" }}>{error}</div>}
+          <Toast message={error} tone="error" />
           <div className="gitui-dialog-list">
             {commits === null && <div className="gitui-diff-placeholder">…</div>}
             {commits !== null && commits.length === 0 && (

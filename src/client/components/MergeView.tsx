@@ -238,8 +238,7 @@ export function MergeView(props: {
               </button>
             )}
           </div>
-          <Toast message={notice} />
-          {mergeError !== null && <div className="gitui-error" style={{ padding: "8px 0 0" }}>{mergeError}</div>}
+          <Toast message={mergeError !== null ? mergeError : notice} tone={mergeError !== null ? "error" : "ok"} />
         </div>
       </div>
     );
@@ -316,8 +315,7 @@ export function MergeView(props: {
           </div>
         ))}
       </div>
-      {mergeError !== null && <div className="gitui-error">{mergeError}</div>}
-      <Toast message={notice} />
+      <Toast message={mergeError !== null ? mergeError : notice} tone={mergeError !== null ? "error" : "ok"} />
     </div>
   );
 }

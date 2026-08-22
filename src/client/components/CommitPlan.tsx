@@ -132,7 +132,7 @@ export function CommitPlan(props: {
           );
         })}
       </div>
-      {error !== null && <div className="gitui-error">{error}</div>}
+      <Toast message={error} tone="error" />
       {results === null ? (
         <div className="gitui-commit-plan-actions">
           <button

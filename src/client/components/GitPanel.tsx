@@ -1761,6 +1761,40 @@ export function GitPanel(props: {
     "--git-ui-font-scale": String(fontScale)
   } as unknown as React.CSSProperties;
 
+  // Maximized (fullscreen) bounds: the panel fills from below the host header
+  // so the 对话/轨迹 tabs stay visible, down to above the composer input card.
+  const [fullscreenTop, setFullscreenTop] = useState(0);
+  const [fullscreenHeight, setFullscreenHeight] = useState<number>(() => window.innerHeight);
+  useLayoutEffect(() => {
+    if (!fullscreen) return;
+    const measure = (): void => {
+      const seat = document.querySelector("[data-composer-seat]");
+      const root = seat?.parentElement?.parentElement;
+      const header = root?.querySelector(":scope > header") ?? root?.querySelector("header");
+      const card = document.querySelector("[data-composer-card]") ?? seat?.querySelector("[data-composer-card]");
+      const headerBottom = header?.getBoundingClientRect().bottom ?? 0;
+      const cardTop = card?.getBoundingClientRect().top ?? window.innerHeight;
+      // CSS 'bottom' is measured from the viewport's bottom edge, but
+      // getBoundingClientRect().top is from the top - so anchor by top + height
+      // instead of bottom, otherwise the panel collapses to ~0 height.
+      setFullscreenTop(headerBottom);
+      setFullscreenHeight(Math.max(0, cardTop - headerBottom));
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    // The header (tabs) and the composer input card can grow/shrink (tabs wrap,
+    // the composer expands) — keep the maximized bounds in sync.
+    const observer = new ResizeObserver(measure);
+    const seat = document.querySelector("[data-composer-seat]");
+    const card = document.querySelector("[data-composer-card]");
+    if (seat !== null) observer.observe(seat);
+    if (card !== null) observer.observe(card);
+    return () => {
+      window.removeEventListener("resize", measure);
+      observer.disconnect();
+    };
+  }, [fullscreen]);
+
   const resizeHandle = (
     <div
       className="gitui-resize"
@@ -2067,7 +2101,11 @@ export function GitPanel(props: {
     <div data-git-ui-root="" style={fontScaleStyle}>
       <div
         className={"gitui-panel" + (fullscreen ? " gitui-fullscreen" : "")}
-        style={fullscreen ? undefined : { height: `${panelHeight}px` }}
+        style={
+          fullscreen
+            ? { position: "fixed", top: fullscreenTop, left: 0, right: 0, bottom: "auto", height: fullscreenHeight, zIndex: 2147483000 }
+            : { height: `${panelHeight}px` }
+        }
       >
         {!fullscreen && resizeHandle}
         {titleBar}

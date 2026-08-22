@@ -966,7 +966,6 @@ export function HistoryView(props: {
                 <span className="gitui-commit-meta">{formatShortDate(row.date)}</span>
               </div>
             ))}
-          {error !== null && <div className="gitui-error">{error}</div>}
         </div>
       </div>
       <Splitter
@@ -1031,7 +1030,7 @@ export function HistoryView(props: {
           onClose={() => setMoreMenu(null)}
         />
       )}
-      <Toast message={notice} />
+      <Toast message={error !== null ? error : notice} tone={error !== null ? "error" : "ok"} />
       </div>
       {hoverInfo !== null && (
         <div
